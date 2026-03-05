@@ -81,6 +81,7 @@ const fields = {
 const PIXELS_PER_INCH = 4;
 const GRID_CELL_INCHES = 50;
 const GRID_CELL_PIXELS = GRID_CELL_INCHES * PIXELS_PER_INCH;
+const MASTER_GRID_DIVISIONS = 4;
 const STORAGE_KEY = 'dessin-warehouse-plan-v2';
 const ADVANCED_OPTIONS_KEY = 'dessin-advanced-options-v1';
 const VIEW3D_CONTEXT_KEY = 'dessin-view3d-context-v1';
@@ -243,15 +244,37 @@ function pointerPosition(event) {
 
 function snap(value) {
   if (!options.snapToGrid) return value;
-  return Math.round(value / options.gridSize) * options.gridSize;
+  const divisionSize = Math.max(1, options.gridSize / MASTER_GRID_DIVISIONS);
+  return Math.round(value / divisionSize) * divisionSize;
 }
 
 function drawGrid() {
   if (!options.showGrid) return;
 
   ctx.save();
-  ctx.strokeStyle = '#e3e9fb';
+  const divisionSize = Math.max(1, options.gridSize / MASTER_GRID_DIVISIONS);
+
+  ctx.strokeStyle = '#ecf1ff';
   ctx.lineWidth = 1;
+
+  for (let x = 0; x <= canvas.width; x += divisionSize) {
+    if (x % options.gridSize === 0) continue;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+
+  for (let y = 0; y <= canvas.height; y += divisionSize) {
+    if (y % options.gridSize === 0) continue;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = '#d5dff7';
+  ctx.lineWidth = 1.2;
 
   for (let x = 0; x <= canvas.width; x += options.gridSize) {
     ctx.beginPath();
