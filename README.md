@@ -11,7 +11,9 @@ Cette version Web fonctionne sur iPhone (Safari) et permet de :
 - sauvegarder/charger le plan en JSON,
 - exporter le plan en PNG,
 - activer des options avancées (snap grille, affichage grille/labels, auto-save local),
-- annuler/rétablir des actions, dupliquer un bin, gérer couleur + verrouillage d'un bin.
+- annuler/rétablir des actions, dupliquer un bin, gérer couleur + verrouillage d'un bin,
+- piloter la qualité du layout via un dashboard KPI (occupation, data complétude, score qualité),
+- rechercher des bins instantanément, cibler les données manquantes et exporter un CSV opérationnel.
 
 ### Lancer localement
 ```bash

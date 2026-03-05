@@ -38,6 +38,15 @@ const widthPlusButton = document.getElementById('width-plus');
 
 const form = document.getElementById('bin-form');
 const emptyState = document.getElementById('empty-state');
+const qualityBadge = document.getElementById('quality-badge');
+const totalBinsMetric = document.getElementById('metric-total-bins');
+const usedAreaMetric = document.getElementById('metric-used-area');
+const lockedBinsMetric = document.getElementById('metric-locked-bins');
+const missingFieldsMetric = document.getElementById('metric-missing-fields');
+const binSearchInput = document.getElementById('bin-search');
+const focusMissingDataButton = document.getElementById('focus-missing-data');
+const exportCsvButton = document.getElementById('export-csv');
+const searchFeedback = document.getElementById('search-feedback');
 const fields = {
   name: document.getElementById('bin-name'),
   location: document.getElementById('bin-location'),
@@ -281,6 +290,85 @@ function drawRotatedBin(bin, selected) {
   ctx.restore();
 }
 
+function getMissingDataCount(bin) {
+  const required = [bin.name, bin.location, bin.section, bin.zone];
+  return required.filter((value) => !String(value || '').trim()).length;
+}
+
+function updateAnalytics() {
+  const total = bins.length;
+  const usedArea = bins.reduce((sum, bin) => sum + (bin.width * bin.height), 0);
+  const boardArea = Math.max(canvas.width * canvas.height, 1);
+  const usedPercent = Math.min(100, (usedArea / boardArea) * 100);
+  const locked = bins.filter((bin) => bin.locked).length;
+  const missing = bins.filter((bin) => getMissingDataCount(bin) > 0).length;
+
+  const metadataScore = total === 0 ? 100 : Math.max(0, Math.round(((total - missing) / total) * 100));
+  const occupancyScore = Math.max(0, Math.round(100 - Math.abs(usedPercent - 55) * 1.2));
+  const mobilityScore = total === 0 ? 100 : Math.round(((total - locked) / total) * 100);
+  const quality = Math.round((metadataScore * 0.5) + (occupancyScore * 0.3) + (mobilityScore * 0.2));
+
+  totalBinsMetric.textContent = String(total);
+  usedAreaMetric.textContent = `${usedPercent.toFixed(1)}%`;
+  lockedBinsMetric.textContent = String(locked);
+  missingFieldsMetric.textContent = String(missing);
+  qualityBadge.textContent = `Score qualité: ${quality}/100`;
+  qualityBadge.classList.toggle('quality-strong', quality >= 85);
+  qualityBadge.classList.toggle('quality-medium', quality >= 60 && quality < 85);
+  qualityBadge.classList.toggle('quality-risk', quality < 60);
+}
+
+function filterBins(term) {
+  const query = term.trim().toLowerCase();
+  if (!query) {
+    searchFeedback.textContent = 'Prêt pour audit opérationnel.';
+    return [];
+  }
+
+  const matches = bins.filter((bin) => [bin.name, bin.location, bin.section, bin.zone, bin.notes]
+    .some((value) => String(value || '').toLowerCase().includes(query)));
+
+  searchFeedback.textContent = matches.length
+    ? `${matches.length} résultat(s) trouvé(s).`
+    : 'Aucun résultat. Vérifie le nom, la zone ou la section.';
+
+  return matches;
+}
+
+function exportOperationalCsv() {
+  if (!bins.length) {
+    alert('Aucun bin à exporter.');
+    return;
+  }
+
+  const header = ['name', 'location', 'section', 'zone', 'type', 'width_in', 'height_in', 'rotation_deg', 'locked', 'notes'];
+  const rows = bins.map((bin) => {
+    const values = [
+      bin.name,
+      bin.location,
+      bin.section,
+      bin.zone,
+      bin.type,
+      Math.round(bin.width / PIXELS_PER_INCH),
+      Math.round(bin.height / PIXELS_PER_INCH),
+      Math.round(bin.rotation || 0),
+      bin.locked ? 'yes' : 'no',
+      (bin.notes || '').replaceAll('\n', ' ')
+    ];
+    return values.map((value) => `"${String(value || '').replaceAll('"', '""')}"`).join(',');
+  });
+
+  const csv = [header.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'warehouse-operational-export.csv';
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+
 function drawScene() {
   document.body.classList.toggle('hide-grid', !options.showGrid);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -290,6 +378,7 @@ function drawScene() {
     const selected = bin.id === selectedId;
     drawRotatedBin(bin, selected);
   });
+  updateAnalytics();
 }
 
 function setMode(nextMode) {
@@ -639,6 +728,27 @@ exportButton.addEventListener('click', () => {
   anchor.download = 'warehouse-plan.png';
   anchor.click();
 });
+
+
+binSearchInput?.addEventListener('input', () => {
+  const matches = filterBins(binSearchInput.value);
+  if (matches.length) {
+    selectBin(matches[0]);
+  }
+});
+
+focusMissingDataButton?.addEventListener('click', () => {
+  const firstMissing = bins.find((bin) => getMissingDataCount(bin) > 0);
+  if (!firstMissing) {
+    searchFeedback.textContent = 'Excellence: tous les bins ont des données complètes.';
+    return;
+  }
+
+  selectBin(firstMissing);
+  searchFeedback.textContent = `Bin à compléter sélectionné: ${firstMissing.name || firstMissing.id.slice(0, 8)}.`;
+});
+
+exportCsvButton?.addEventListener('click', exportOperationalCsv);
 
 snapToggle.addEventListener('change', () => {
   options.snapToGrid = snapToggle.checked;

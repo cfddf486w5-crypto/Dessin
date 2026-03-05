@@ -388,3 +388,61 @@ select {
   color: #4e65a8;
   letter-spacing: 0.02em;
 }
+
+.analytics-panel .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+#quality-badge {
+  font-weight: 800;
+  font-size: 0.9rem;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #edf2ff;
+  color: #1b3f97;
+}
+
+#quality-badge.quality-strong { background: #dbf7e8; color: #12613b; }
+#quality-badge.quality-medium { background: #fff4d9; color: #8f5a00; }
+#quality-badge.quality-risk { background: #ffe1e7; color: #9c1f38; }
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.analytics-grid article {
+  background: rgb(236 242 255 / 70%);
+  border: 1px solid #d7e2fb;
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.analytics-grid p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #5c6e9f;
+}
+
+.analytics-grid strong {
+  font-size: 1.3rem;
+}
+
+.analytics-actions {
+  margin-top: 8px;
+}
+
+.search-field {
+  min-width: min(100%, 280px);
+}
+
+#search-feedback {
+  margin: 8px 0 2px;
+  font-size: 0.88rem;
+  color: #4f6397;
+  font-weight: 600;
+}
