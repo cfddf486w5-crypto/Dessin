@@ -15,8 +15,6 @@
         </div>
         <div class="header-actions">
           <a class="options-link" href="view3d.html" aria-label="Ouvrir la visualisation 3D">👁️ Vue 3D</a>
-          <a class="options-link" href="immersive3d.html" aria-label="Ouvrir la vue 3D immersive">🏭 Vue 3D immersive</a>
-          <a class="options-link" href="map3d.html" aria-label="Ouvrir la page Map 3D">🧱 Map 3D</a>
           <a class="options-link" href="options.html" aria-label="Ouvrir la page des options">⚙️ Options</a>
         </div>
       </div>
@@ -154,28 +152,30 @@
         </form>
       </section>
 
-
-      <section class="panel analytics-panel" id="analytics-panel" aria-live="polite">
-        <div class="panel-header">
-          <h2>Pilotage pro</h2>
-          <span id="quality-badge">Score qualité: --</span>
-        </div>
-        <div class="analytics-grid">
-          <article><p>Bins totaux</p><strong id="metric-total-bins">0</strong></article>
-          <article><p>Surface utilisée</p><strong id="metric-used-area">0%</strong></article>
-          <article><p>Bins verrouillés</p><strong id="metric-locked-bins">0</strong></article>
-          <article><p>Données incomplètes</p><strong id="metric-missing-fields">0</strong></article>
-        </div>
-        <div class="toolbar secondary analytics-actions" aria-label="Actions produit">
-          <label class="inline-field search-field">
-            Recherche rapide
-            <input type="search" id="bin-search" placeholder="Nom, zone, section, location" />
-          </label>
-          <button id="focus-missing-data">Focus données à compléter</button>
-          <button id="export-csv">Exporter CSV opérationnel</button>
-        </div>
-        <p id="search-feedback">Prêt pour audit opérationnel.</p>
-      </section>
+      <details class="toolbar-group">
+        <summary>Pilotage du plan</summary>
+        <section class="panel analytics-panel" id="analytics-panel" aria-live="polite">
+          <div class="panel-header">
+            <h2>Pilotage pro</h2>
+            <span id="quality-badge">Score qualité: --</span>
+          </div>
+          <div class="analytics-grid">
+            <article><p>Bins totaux</p><strong id="metric-total-bins">0</strong></article>
+            <article><p>Surface utilisée</p><strong id="metric-used-area">0%</strong></article>
+            <article><p>Bins verrouillés</p><strong id="metric-locked-bins">0</strong></article>
+            <article><p>Données incomplètes</p><strong id="metric-missing-fields">0</strong></article>
+          </div>
+          <div class="toolbar secondary analytics-actions" aria-label="Actions produit">
+            <label class="inline-field search-field">
+              Recherche rapide
+              <input type="search" id="bin-search" placeholder="Nom, zone, section, location" />
+            </label>
+            <button id="focus-missing-data">Focus données à compléter</button>
+            <button id="export-csv">Exporter CSV opérationnel</button>
+          </div>
+          <p id="search-feedback">Prêt pour audit opérationnel.</p>
+        </section>
+      </details>
 
       <details class="toolbar-group">
         <summary>Sauvegarde & historique</summary>
