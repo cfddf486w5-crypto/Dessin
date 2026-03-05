@@ -793,16 +793,16 @@ function adjustZoom(deltaPercent) {
   persistIfEnabled();
 }
 
-function adjustSelectedDimension(dimension, deltaCells) {
+function adjustSelectedDimension(dimension, deltaInches) {
   const current = bins.find((item) => item.id === selectedId);
   if (!current || current.locked) return;
 
   pushHistory();
-  const delta = Math.max(5, options.gridSize / 2) * deltaCells;
+  const delta = PIXELS_PER_INCH * deltaInches;
   const key = dimension === 'width' ? 'width' : 'height';
   const limit = key === 'width' ? canvas.width : canvas.height;
   const position = key === 'width' ? current.x : current.y;
-  current[key] = clamp(current[key] + delta, 20, limit - position);
+  current[key] = clamp(current[key] + delta, PIXELS_PER_INCH, limit - position);
   updateMeasureTooltip(current.width, current.height);
   drawScene();
   persistIfEnabled();
