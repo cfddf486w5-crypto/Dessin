@@ -40,6 +40,10 @@ const overlayUpButton = document.getElementById('overlay-up');
 const overlayDownButton = document.getElementById('overlay-down');
 const clearReferenceImageButton = document.getElementById('clear-reference-image');
 
+const boardWrap = document.querySelector('.board-wrap');
+const panHorizontalHandle = document.getElementById('pan-horizontal-handle');
+const panVerticalHandle = document.getElementById('pan-vertical-handle');
+
 const measureTooltip = document.getElementById('measure-tooltip');
 const measureHandle = measureTooltip.querySelector('.tooltip-handle');
 const lengthLabel = document.getElementById('measure-length');
@@ -97,6 +101,7 @@ let selectedId = null;
 let startPoint = null;
 let dragOffset = null;
 let tooltipDrag = null;
+let planPanDrag = null;
 let activePresetBin = null;
 
 let options = {
@@ -825,6 +830,66 @@ function applyZoom() {
   const scale = clamp(options.zoom || 1, 0.5, 2);
   options.zoom = scale;
   canvas.style.width = `${scale * 100}%`;
+  updatePlanPanHandles();
+}
+
+function updatePlanPanHandles() {
+  if (!boardWrap || !panHorizontalHandle || !panVerticalHandle) return;
+
+  const horizontalRange = Math.max(0, boardWrap.clientWidth - panHorizontalHandle.offsetWidth - 20);
+  const verticalRange = Math.max(0, boardWrap.clientHeight - panVerticalHandle.offsetHeight - 20);
+
+  const maxScrollLeft = Math.max(1, boardWrap.scrollWidth - boardWrap.clientWidth);
+  const maxScrollTop = Math.max(1, boardWrap.scrollHeight - boardWrap.clientHeight);
+
+  const xRatio = boardWrap.scrollLeft / maxScrollLeft;
+  const yRatio = boardWrap.scrollTop / maxScrollTop;
+
+  panHorizontalHandle.style.left = `${10 + (horizontalRange * xRatio)}px`;
+  panHorizontalHandle.style.transform = 'none';
+
+  panVerticalHandle.style.top = `${10 + (verticalRange * yRatio)}px`;
+  panVerticalHandle.style.transform = 'none';
+}
+
+function attachPlanPanHandle(handle, axis) {
+  if (!handle || !boardWrap) return;
+
+  handle.addEventListener('pointerdown', (event) => {
+    handle.setPointerCapture(event.pointerId);
+    planPanDrag = {
+      pointerId: event.pointerId,
+      axis,
+      startCoord: axis === 'x' ? event.clientX : event.clientY,
+      startScroll: axis === 'x' ? boardWrap.scrollLeft : boardWrap.scrollTop,
+      handle
+    };
+    handle.classList.add('dragging');
+  });
+
+  handle.addEventListener('pointermove', (event) => {
+    if (!planPanDrag || planPanDrag.pointerId !== event.pointerId || planPanDrag.axis !== axis) return;
+
+    const currentCoord = axis === 'x' ? event.clientX : event.clientY;
+    const delta = currentCoord - planPanDrag.startCoord;
+    if (axis === 'x') {
+      boardWrap.scrollLeft = planPanDrag.startScroll + (delta * 2);
+    } else {
+      boardWrap.scrollTop = planPanDrag.startScroll + (delta * 2);
+    }
+    updatePlanPanHandles();
+  });
+
+  const stopDrag = (event) => {
+    if (!planPanDrag || planPanDrag.pointerId !== event.pointerId) return;
+    handle.releasePointerCapture(event.pointerId);
+    handle.classList.remove('dragging');
+    planPanDrag = null;
+    updatePlanPanHandles();
+  };
+
+  handle.addEventListener('pointerup', stopDrag);
+  handle.addEventListener('pointercancel', stopDrag);
 }
 
 function adjustGridSize() {
@@ -1237,6 +1302,13 @@ window.addEventListener('keydown', (event) => {
     event.preventDefault();
     duplicateButton.click();
   }
+
+  if (event.key === '=' || event.key === '+' || event.code === 'NumpadEqual' || event.code === 'NumpadAdd') {
+    event.preventDefault();
+    binSearchInput?.focus();
+    binSearchInput?.select();
+    searchFeedback.textContent = 'Identification manuelle: entrez un nom, zone, section ou location.';
+  }
 });
 
 measureHandle.addEventListener('pointerdown', (event) => {
@@ -1280,7 +1352,12 @@ measureUnitToggle.addEventListener('click', () => {
 window.addEventListener('resize', () => {
   const rect = measureTooltip.getBoundingClientRect();
   setTooltipPosition(rect.left, rect.top);
+  updatePlanPanHandles();
 });
+
+attachPlanPanHandle(panHorizontalHandle, 'x');
+attachPlanPanHandle(panVerticalHandle, 'y');
+boardWrap?.addEventListener('scroll', updatePlanPanHandles);
 
 
 function getActivePresetBin(layout = {}) {
@@ -1332,7 +1409,7 @@ syncOptionsUI();
 applyZoom();
 updateMeasureTooltip();
 drawScene();
-
+updatePlanPanHandles();
 
 if (view3dLink) {
   view3dLink.addEventListener('click', () => {
