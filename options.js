@@ -27,10 +27,48 @@ const uiLabels = [
   'Espacement confortable', 'Liens surlignés', 'Icônes accentuées', 'Bordures minimales', 'Bordures marquées'
 ];
 
-const layoutLabels = Array.from({ length: 40 }, (_, index) => {
-  if (index === 0) return 'Layout option 1 (Tableau 1 km)';
-  return `Layout option ${index + 1}`;
-});
+const layoutOptions = [
+  { key: 'boardOneKilometer', label: 'Tableau 1 km' },
+  { key: 'layout_02', label: 'Deux colonnes fixes' },
+  { key: 'layout_03', label: 'Trois colonnes fixes' },
+  { key: 'layout_04', label: 'Quatre colonnes fixes' },
+  { key: 'layout_05', label: 'Gap compact' },
+  { key: 'layout_06', label: 'Gap confortable' },
+  { key: 'layout_07', label: 'Marge interne dense' },
+  { key: 'layout_08', label: 'Marge interne large' },
+  { key: 'layout_09', label: 'Alignement haut' },
+  { key: 'layout_10', label: 'Alignement centré' },
+  { key: 'layout_11', label: 'Alignement étiré' },
+  { key: 'layout_12', label: 'Cards horizontales' },
+  { key: 'layout_13', label: 'Cards verticales' },
+  { key: 'layout_14', label: 'Cartes mini' },
+  { key: 'layout_15', label: 'Cartes XL' },
+  { key: 'layout_16', label: 'Séparateurs visibles' },
+  { key: 'layout_17', label: 'Séparateurs discrets' },
+  { key: 'layout_18', label: 'Mosaïque alternée' },
+  { key: 'layout_19', label: 'Décalage horizontal' },
+  { key: 'layout_20', label: 'Scale léger' },
+  { key: 'layout_21', label: 'Mode sticky options' },
+  { key: 'layout_22', label: 'Scroll snapping' },
+  { key: 'layout_23', label: 'Aération verticale' },
+  { key: 'layout_24', label: 'Aération horizontale' },
+  { key: 'layout_25', label: 'Bordures adoucies' },
+  { key: 'layout_26', label: 'Bordures nettes' },
+  { key: 'layout_27', label: 'Ombre cartes renforcée' },
+  { key: 'layout_28', label: 'Ombre cartes minimale' },
+  { key: 'layout_29', label: 'Fond section léger' },
+  { key: 'layout_30', label: 'Fond section contrasté' },
+  { key: 'layout_31', label: 'Accents bleus' },
+  { key: 'layout_32', label: 'Accents violets' },
+  { key: 'layout_33', label: 'Compteur activé' },
+  { key: 'layout_34', label: 'Compteur discret' },
+  { key: 'layout_35', label: 'Animation hover' },
+  { key: 'layout_36', label: 'Animation désactivée' },
+  { key: 'layout_37', label: 'Texte compact' },
+  { key: 'layout_38', label: 'Texte confortable' },
+  { key: 'layout_39', label: 'Contour section renforcé' },
+  { key: 'layout_40', label: 'Fond dégradé premium' }
+];
 
 function loadState() {
   try {
@@ -124,26 +162,144 @@ function applyUiPreview() {
   }
 }
 
+function getLayoutColumns() {
+  if (state.layout.layout_04) return 4;
+  if (state.layout.layout_03) return 3;
+  if (state.layout.layout_02) return 2;
+  return 1 + (countEnabled(state.layout) % 4);
+}
+
 function applyLayoutPreview() {
   const enabled = countEnabled(state.layout);
-  const columns = 1 + (enabled % 4);
-  const gap = 10 + (enabled % 7);
+  const columns = getLayoutColumns();
 
-  layoutPanel.style.setProperty('--layout-columns', String(columns));
-  layoutPanel.style.setProperty('--layout-gap', `${gap}px`);
-  layoutPanel.style.padding = `${10 + (enabled % 9)}px`;
+  const gap = state.layout.layout_05
+    ? 6
+    : state.layout.layout_06
+      ? 18
+      : 10 + (enabled % 7);
 
-  const scale = state.layout.layout_20 ? 1.02 : 1;
-  layoutPanel.style.transform = state.layout.layout_19 ? `scale(${scale}) translateX(4px)` : `scale(${scale})`;
+  const panelPadding = state.layout.layout_07
+    ? 8
+    : state.layout.layout_08
+      ? 20
+      : 10 + (enabled % 9);
 
-  layoutContainer.style.gridTemplateColumns = `repeat(${columns}, minmax(170px, 1fr))`;
+  const alignItems = state.layout.layout_09
+    ? 'start'
+    : state.layout.layout_10
+      ? 'center'
+      : state.layout.layout_11
+        ? 'stretch'
+        : 'normal';
+
+  const gridAutoFlow = state.layout.layout_12
+    ? 'column'
+    : state.layout.layout_13
+      ? 'row'
+      : 'row dense';
+
+  const cardMinWidth = state.layout.layout_14
+    ? 130
+    : state.layout.layout_15
+      ? 220
+      : 170;
+
+  const separatorColor = state.layout.layout_16
+    ? 'rgb(106 136 198 / 38%)'
+    : state.layout.layout_17
+      ? 'rgb(106 136 198 / 18%)'
+      : 'rgb(106 136 198 / 26%)';
+
+  const panelRadius = state.layout.layout_25
+    ? 24
+    : state.layout.layout_26
+      ? 10
+      : 16;
+
+  const panelOutline = state.layout.layout_39
+    ? '2px solid rgb(90 126 198 / 42%)'
+    : '1px solid rgb(106 136 198 / 26%)';
+
+  const panelBg = state.layout.layout_40
+    ? 'linear-gradient(160deg, rgb(255 255 255 / 84%), rgb(220 235 255 / 72%))'
+    : state.layout.layout_30
+      ? 'rgb(241 247 255 / 88%)'
+      : state.layout.layout_29
+        ? 'rgb(255 255 255 / 72%)'
+        : 'rgb(255 255 255 / 76%)';
+
+  const accent = state.layout.layout_32
+    ? 'rgb(129 90 255 / 36%)'
+    : state.layout.layout_31
+      ? 'rgb(63 130 255 / 36%)'
+      : 'rgb(106 136 198 / 26%)';
+
+  const boxShadow = state.layout.layout_27
+    ? '0 14px 30px rgb(35 66 128 / 18%)'
+    : state.layout.layout_28
+      ? '0 3px 10px rgb(35 66 128 / 8%)'
+      : '0 8px 22px rgb(35 66 128 / 12%)';
+
+  const lineHeight = state.layout.layout_37
+    ? '1.1'
+    : state.layout.layout_38
+      ? '1.45'
+      : '1.25';
+
+  const animation = state.layout.layout_36 ? 'none' : state.layout.layout_35 ? 'transform 220ms ease, box-shadow 220ms ease' : 'none';
+
+  layoutPanel.style.padding = `${panelPadding}px`;
+  layoutPanel.style.borderRadius = `${panelRadius}px`;
+  layoutPanel.style.border = panelOutline;
+  layoutPanel.style.background = panelBg;
+  layoutPanel.style.boxShadow = boxShadow;
+
+  const boardScale = state.layout.boardOneKilometer ? 0.92 : 1;
+  const scale = state.layout.layout_20 ? boardScale * 1.02 : boardScale;
+  const translateX = state.layout.layout_19 ? 'translateX(4px)' : 'translateX(0)';
+  layoutPanel.style.transform = `${translateX} scale(${scale})`;
+  layoutPanel.style.position = state.layout.layout_21 ? 'sticky' : 'relative';
+  layoutPanel.style.top = state.layout.layout_21 ? '8px' : 'auto';
+  layoutPanel.style.letterSpacing = state.layout.boardOneKilometer ? '0.01em' : 'normal';
+
+  layoutContainer.style.gridTemplateColumns = `repeat(${columns}, minmax(${cardMinWidth}px, 1fr))`;
   layoutContainer.style.gap = `${gap}px`;
+  layoutContainer.style.alignItems = alignItems;
+  layoutContainer.style.gridAutoFlow = gridAutoFlow;
+  layoutContainer.style.rowGap = state.layout.layout_23 ? `${gap + 8}px` : `${gap}px`;
+  layoutContainer.style.columnGap = state.layout.layout_24 ? `${gap + 10}px` : `${gap}px`;
+  layoutContainer.style.paddingBottom = state.layout.layout_22 ? '12px' : '0';
+  layoutContainer.style.scrollSnapType = state.layout.layout_22 ? 'y mandatory' : 'none';
 
-  if (state.layout.layout_40) {
-    layoutPanel.style.background = 'linear-gradient(160deg, rgb(255 255 255 / 84%), rgb(220 235 255 / 72%))';
-  } else {
-    layoutPanel.style.background = 'rgb(255 255 255 / 76%)';
-  }
+  const toggles = layoutContainer.querySelectorAll('.toggle');
+  toggles.forEach((toggle, index) => {
+    toggle.style.borderTop = `1px solid ${separatorColor}`;
+    toggle.style.borderRadius = state.layout.layout_18 && index % 2 ? '14px 4px 14px 4px' : '10px';
+    toggle.style.background = index % 2 ? `linear-gradient(180deg, ${accent}, transparent)` : 'transparent';
+    toggle.style.minHeight = state.layout.layout_15 ? '58px' : state.layout.layout_14 ? '36px' : '44px';
+    toggle.style.transition = animation;
+    toggle.style.scrollSnapAlign = state.layout.layout_22 ? 'start' : 'none';
+    toggle.style.lineHeight = lineHeight;
+    if (state.layout.layout_35 && !state.layout.layout_36) {
+      toggle.onmouseenter = () => {
+        toggle.style.transform = 'translateY(-2px)';
+      };
+      toggle.onmouseleave = () => {
+        toggle.style.transform = 'translateY(0)';
+      };
+    } else {
+      toggle.onmouseenter = null;
+      toggle.onmouseleave = null;
+      toggle.style.transform = 'translateY(0)';
+    }
+  });
+
+  layoutPanel.dataset.layoutCount = state.layout.layout_33
+    ? `${enabled} options actives`
+    : state.layout.layout_34
+      ? `${enabled}`
+      : '';
 }
 
 function applyPreview() {
@@ -164,9 +320,8 @@ for (let i = 1; i <= 20; i += 1) {
   createToggle(uiContainer, 'ui', key, uiLabels[i - 1]);
 }
 
-for (let i = 1; i <= 40; i += 1) {
-  const key = i === 1 ? 'boardOneKilometer' : `layout_${String(i).padStart(2, '0')}`;
-  createToggle(layoutContainer, 'layout', key, layoutLabels[i - 1]);
-}
+layoutOptions.forEach((option) => {
+  createToggle(layoutContainer, 'layout', option.key, option.label);
+});
 
 applyPreview();
