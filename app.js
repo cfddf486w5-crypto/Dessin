@@ -29,9 +29,15 @@ const zoomPlusButton = document.getElementById('zoom-plus');
 const rotateLeftButton = document.getElementById('rotate-left');
 const rotateRightButton = document.getElementById('rotate-right');
 const overlayOpacityInput = document.getElementById('overlay-opacity');
+const overlayCellPixelsInput = document.getElementById('overlay-cell-pixels');
 const overlayOpacityMinusButton = document.getElementById('overlay-opacity-minus');
 const overlayOpacityPlusButton = document.getElementById('overlay-opacity-plus');
 const overlayToggle = document.getElementById('overlay-toggle');
+const syncOverlayGridButton = document.getElementById('sync-overlay-grid');
+const overlayLeftButton = document.getElementById('overlay-left');
+const overlayRightButton = document.getElementById('overlay-right');
+const overlayUpButton = document.getElementById('overlay-up');
+const overlayDownButton = document.getElementById('overlay-down');
 const clearReferenceImageButton = document.getElementById('clear-reference-image');
 
 const measureTooltip = document.getElementById('measure-tooltip');
@@ -102,14 +108,18 @@ let options = {
   zoom: 1,
   dimensionUnit: 'ft-in',
   overlayOpacity: 40,
-  showOverlay: true
+  showOverlay: true,
+  overlayCellPixels: 50
 };
 
 let referenceImageState = {
   src: null,
   element: null,
   width: 0,
-  height: 0
+  height: 0,
+  baseRatio: 1,
+  offsetX: 0,
+  offsetY: 0
 };
 
 const undoStack = [];
@@ -258,14 +268,13 @@ function drawGrid() {
 function drawReferenceImage() {
   if (!options.showOverlay || !referenceImageState.element) return;
 
-  const ratio = Math.min(
-    canvas.width / Math.max(referenceImageState.width, 1),
-    canvas.height / Math.max(referenceImageState.height, 1)
-  );
+  const cellPixels = Math.max(1, Number(options.overlayCellPixels) || 50);
+  const gridSyncRatio = options.gridSize / cellPixels;
+  const ratio = referenceImageState.baseRatio * gridSyncRatio;
   const drawWidth = referenceImageState.width * ratio;
   const drawHeight = referenceImageState.height * ratio;
-  const offsetX = (canvas.width - drawWidth) / 2;
-  const offsetY = (canvas.height - drawHeight) / 2;
+  const offsetX = referenceImageState.offsetX;
+  const offsetY = referenceImageState.offsetY;
 
   ctx.save();
   ctx.globalAlpha = clamp((options.overlayOpacity || 40) / 100, 0.05, 1);
@@ -273,19 +282,29 @@ function drawReferenceImage() {
   ctx.restore();
 }
 
-function restoreReferenceImage(source) {
+function restoreReferenceImage(source, transform = null) {
   if (!source) {
-    referenceImageState = { src: null, element: null, width: 0, height: 0 };
+    referenceImageState = { src: null, element: null, width: 0, height: 0, baseRatio: 1, offsetX: 0, offsetY: 0 };
     return;
   }
 
   const image = new Image();
   image.addEventListener('load', () => {
+    const fitRatio = Math.min(
+      canvas.width / Math.max(image.naturalWidth, 1),
+      canvas.height / Math.max(image.naturalHeight, 1)
+    );
+    const fittedWidth = image.naturalWidth * fitRatio;
+    const fittedHeight = image.naturalHeight * fitRatio;
+
     referenceImageState = {
       src: source,
       element: image,
       width: image.naturalWidth,
-      height: image.naturalHeight
+      height: image.naturalHeight,
+      baseRatio: Number.isFinite(Number(transform?.baseRatio)) ? Number(transform.baseRatio) : fitRatio,
+      offsetX: Number.isFinite(Number(transform?.offsetX)) ? Number(transform.offsetX) : ((canvas.width - fittedWidth) / 2),
+      offsetY: Number.isFinite(Number(transform?.offsetY)) ? Number(transform.offsetY) : ((canvas.height - fittedHeight) / 2)
     };
     drawScene();
     persistIfEnabled();
@@ -708,7 +727,16 @@ function persist3dContext() {
 
 function persistIfEnabled() {
   if (!options.autoSave) return;
-  const payload = { bins, options, referenceImage: referenceImageState.src };
+  const payload = {
+    bins,
+    options,
+    referenceImage: referenceImageState.src,
+    referenceImageTransform: {
+      baseRatio: referenceImageState.baseRatio,
+      offsetX: referenceImageState.offsetX,
+      offsetY: referenceImageState.offsetY
+    }
+  };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   persist3dContext();
 }
@@ -727,9 +755,11 @@ function restoreFromStorage() {
       ...options,
       ...(parsed.options || {})
     };
-    restoreReferenceImage(parsed.referenceImage || null);
+    const transform = parsed.referenceImageTransform || null;
+    restoreReferenceImage(parsed.referenceImage || null, transform);
     if (!['ft-in', 'in'].includes(options.dimensionUnit)) options.dimensionUnit = 'ft-in';
     options.overlayOpacity = clamp(Number(options.overlayOpacity) || 40, 5, 100);
+    options.overlayCellPixels = clamp(Number(options.overlayCellPixels) || 50, 5, 500);
     options.showOverlay = options.showOverlay !== false;
     enforceGridScale();
   } catch (_) {
@@ -759,6 +789,7 @@ function syncOptionsUI() {
   gridSizePlusButton.disabled = true;
   zoomLevelInput.value = String(Math.round((options.zoom || 1) * 100));
   overlayOpacityInput.value = String(clamp(Number(options.overlayOpacity) || 40, 5, 100));
+  overlayCellPixelsInput.value = String(clamp(Number(options.overlayCellPixels) || 50, 5, 500));
   overlayToggle.checked = options.showOverlay !== false;
   measureUnitToggle.textContent = options.dimensionUnit === 'in' ? '📏 po' : '📏 pi+po';
 }
@@ -767,6 +798,25 @@ function adjustOverlayOpacity(delta) {
   const next = clamp((Number(overlayOpacityInput.value) || options.overlayOpacity || 40) + delta, 5, 100);
   options.overlayOpacity = next;
   overlayOpacityInput.value = String(next);
+  drawScene();
+  persistIfEnabled();
+}
+
+function syncOverlayToGrid() {
+  if (!referenceImageState.element) return;
+  const cellPixels = clamp(Number(overlayCellPixelsInput.value) || 50, 5, 500);
+  options.overlayCellPixels = cellPixels;
+  overlayCellPixelsInput.value = String(cellPixels);
+  referenceImageState.offsetX = snap(referenceImageState.offsetX);
+  referenceImageState.offsetY = snap(referenceImageState.offsetY);
+  drawScene();
+  persistIfEnabled();
+}
+
+function moveOverlayByGrid(deltaX, deltaY) {
+  if (!referenceImageState.element) return;
+  referenceImageState.offsetX = snap(referenceImageState.offsetX + (deltaX * options.gridSize));
+  referenceImageState.offsetY = snap(referenceImageState.offsetY + (deltaY * options.gridSize));
   drawScene();
   persistIfEnabled();
 }
@@ -987,7 +1037,16 @@ undoButton.addEventListener('click', undo);
 redoButton.addEventListener('click', redo);
 
 saveButton.addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify({ bins, options, referenceImage: referenceImageState.src }, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify({
+    bins,
+    options,
+    referenceImage: referenceImageState.src,
+    referenceImageTransform: {
+      baseRatio: referenceImageState.baseRatio,
+      offsetX: referenceImageState.offsetX,
+      offsetY: referenceImageState.offsetY
+    }
+  }, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
@@ -1011,9 +1070,11 @@ fileInput.addEventListener('change', async () => {
       ...options,
       ...(data.options || {})
     };
-    restoreReferenceImage(data.referenceImage || null);
+    const transform = data.referenceImageTransform || null;
+    restoreReferenceImage(data.referenceImage || null, transform);
     if (!['ft-in', 'in'].includes(options.dimensionUnit)) options.dimensionUnit = 'ft-in';
     options.overlayOpacity = clamp(Number(options.overlayOpacity) || 40, 5, 100);
+    options.overlayCellPixels = clamp(Number(options.overlayCellPixels) || 50, 5, 500);
     options.showOverlay = data.options?.showOverlay !== false;
     enforceGridScale();
     syncOptionsUI();
@@ -1120,6 +1181,12 @@ overlayToggle?.addEventListener('change', () => {
   drawScene();
   persistIfEnabled();
 });
+overlayCellPixelsInput?.addEventListener('change', syncOverlayToGrid);
+syncOverlayGridButton?.addEventListener('click', syncOverlayToGrid);
+overlayLeftButton?.addEventListener('click', () => moveOverlayByGrid(-1, 0));
+overlayRightButton?.addEventListener('click', () => moveOverlayByGrid(1, 0));
+overlayUpButton?.addEventListener('click', () => moveOverlayByGrid(0, -1));
+overlayDownButton?.addEventListener('click', () => moveOverlayByGrid(0, 1));
 
 function rotateSelected(delta) {
   const current = bins.find((item) => item.id === selectedId);
