@@ -8,8 +8,13 @@
   </head>
   <body>
     <header>
-      <h1>Warehouse Planner</h1>
-      <p>Dessine ton plan et renseigne les infos de bins.</p>
+      <div class="header-row">
+        <div>
+          <h1>Warehouse Planner</h1>
+          <p>Dessine ton plan et renseigne les infos de bins.</p>
+        </div>
+        <a class="options-link" href="options.html" aria-label="Ouvrir la page des options">⚙️ Options</a>
+      </div>
     </header>
 
     <main>
@@ -63,7 +68,7 @@
       </details>
 
       <section class="board-wrap">
-        <canvas id="warehouse-canvas" width="900" height="1300"></canvas>
+        <canvas id="warehouse-canvas" width="3000" height="3000"></canvas>
       </section>
 
       <section class="panel" id="details-panel">
@@ -104,6 +109,16 @@
             Couleur du bin
             <input type="color" id="bin-color" value="#9bb7ff" />
           </label>
+
+          <label>
+            Rotation (°)
+            <input type="number" id="bin-rotation" min="0" max="359" step="5" value="0" />
+          </label>
+
+          <div class="rotation-actions">
+            <button type="button" id="rotate-left">↺ -15°</button>
+            <button type="button" id="rotate-right">↻ +15°</button>
+          </div>
 
           <label class="toggle compact">
             <input type="checkbox" id="bin-locked" />
