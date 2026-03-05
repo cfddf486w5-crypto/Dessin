@@ -3,6 +3,7 @@ const ctx = canvas.getContext('2d');
 
 const drawButton = document.getElementById('draw-mode');
 const selectButton = document.getElementById('select-mode');
+const loadReferenceMapButton = document.getElementById('load-reference-map');
 const duplicateButton = document.getElementById('duplicate-bin');
 const deleteButton = document.getElementById('delete-bin');
 const clearButton = document.getElementById('clear-all');
@@ -370,6 +371,194 @@ function exportOperationalCsv() {
   URL.revokeObjectURL(url);
 }
 
+function createTemplateBin({ x, y, width, height, name, zone, section, location, type = 'bin', rotation = 0, color = '#b4bf87' }) {
+  return normalizeBin({
+    id: crypto.randomUUID(),
+    x,
+    y,
+    width,
+    height,
+    name,
+    zone,
+    section,
+    location,
+    type,
+    rotation,
+    color,
+    notes: 'Map de référence importée'
+  });
+}
+
+function createRackColumns({
+  startX,
+  startY,
+  columns,
+  rows,
+  cellWidth,
+  cellHeight,
+  gapX,
+  gapY,
+  prefix,
+  zone,
+  section,
+  angle = 0,
+  startIndex = 1
+}) {
+  const generated = [];
+  let index = startIndex;
+
+  for (let col = 0; col < columns; col += 1) {
+    for (let row = 0; row < rows; row += 1) {
+      generated.push(createTemplateBin({
+        x: startX + col * (cellWidth + gapX),
+        y: startY + row * (cellHeight + gapY),
+        width: cellWidth,
+        height: cellHeight,
+        name: `${prefix}${String(index).padStart(2, '0')}`,
+        zone,
+        section,
+        location: `${section} / R${col + 1} / C${row + 1}`,
+        rotation: angle
+      }));
+      index += 1;
+    }
+  }
+
+  return generated;
+}
+
+function buildReferenceMapTemplate() {
+  const templateBins = [];
+
+  templateBins.push(createTemplateBin({
+    x: 420,
+    y: 80,
+    width: 1100,
+    height: 220,
+    name: 'L2A',
+    zone: 'Picking',
+    section: 'L2A',
+    location: 'Bandeau haut',
+    type: 'section',
+    color: '#98b58a'
+  }));
+
+  templateBins.push(...createRackColumns({
+    startX: 450,
+    startY: 340,
+    columns: 8,
+    rows: 12,
+    cellWidth: 36,
+    cellHeight: 34,
+    gapX: 9,
+    gapY: 8,
+    prefix: 'L3A-',
+    zone: 'L3',
+    section: 'L3A'
+  }));
+
+  templateBins.push(...createRackColumns({
+    startX: 920,
+    startY: 340,
+    columns: 8,
+    rows: 10,
+    cellWidth: 36,
+    cellHeight: 34,
+    gapX: 9,
+    gapY: 8,
+    prefix: 'L3B-',
+    zone: 'L3',
+    section: 'L3B'
+  }));
+
+  templateBins.push(...createRackColumns({
+    startX: 1330,
+    startY: 340,
+    columns: 8,
+    rows: 9,
+    cellWidth: 36,
+    cellHeight: 34,
+    gapX: 9,
+    gapY: 8,
+    prefix: 'L3C-',
+    zone: 'L3',
+    section: 'L3C'
+  }));
+
+  templateBins.push(...createRackColumns({
+    startX: 980,
+    startY: 2060,
+    columns: 4,
+    rows: 12,
+    cellWidth: 44,
+    cellHeight: 34,
+    gapX: 10,
+    gapY: 8,
+    prefix: 'L5A-',
+    zone: 'L5',
+    section: 'L5A',
+    angle: -20
+  }));
+
+  templateBins.push(...createRackColumns({
+    startX: 1360,
+    startY: 1980,
+    columns: 4,
+    rows: 12,
+    cellWidth: 44,
+    cellHeight: 34,
+    gapX: 10,
+    gapY: 8,
+    prefix: 'L5B-',
+    zone: 'L5',
+    section: 'L5B',
+    angle: -20
+  }));
+
+  templateBins.push(...createRackColumns({
+    startX: 1690,
+    startY: 1840,
+    columns: 4,
+    rows: 8,
+    cellWidth: 44,
+    cellHeight: 34,
+    gapX: 10,
+    gapY: 8,
+    prefix: 'L5C-',
+    zone: 'L5',
+    section: 'L5C',
+    angle: -20
+  }));
+
+  templateBins.push(createTemplateBin({
+    x: 760,
+    y: 1950,
+    width: 180,
+    height: 130,
+    name: 'Cafétéria',
+    zone: 'Services',
+    section: 'Common',
+    location: 'Bas gauche',
+    type: 'zone',
+    color: '#c6d5ac'
+  }));
+
+  templateBins.push(createTemplateBin({
+    x: 730,
+    y: 420,
+    width: 140,
+    height: 76,
+    name: 'Toilettes',
+    zone: 'Services',
+    section: 'L3A',
+    location: 'Entre L2A et L3A',
+    type: 'zone',
+    color: '#c6d5ac'
+  }));
+
+  return templateBins;
+}
+
 
 function drawScene() {
   document.body.classList.toggle('hide-grid', !options.showGrid);
@@ -690,6 +879,17 @@ clearButton.addEventListener('click', () => {
   if (!bins.length) return;
   pushHistory();
   bins = [];
+  selectBin(null);
+  drawScene();
+  persistIfEnabled();
+});
+
+loadReferenceMapButton?.addEventListener('click', () => {
+  pushHistory();
+  bins = buildReferenceMapTemplate();
+  options.showLabels = true;
+  options.snapToGrid = true;
+  syncOptionsUI();
   selectBin(null);
   drawScene();
   persistIfEnabled();
