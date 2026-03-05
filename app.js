@@ -4,6 +4,7 @@ const ctx = canvas.getContext('2d');
 const drawButton = document.getElementById('draw-mode');
 const selectButton = document.getElementById('select-mode');
 const loadReferenceMapButton = document.getElementById('load-reference-map');
+const importReferenceImageButton = document.getElementById('import-reference-image');
 const duplicateButton = document.getElementById('duplicate-bin');
 const deleteButton = document.getElementById('delete-bin');
 const clearButton = document.getElementById('clear-all');
@@ -13,6 +14,7 @@ const saveButton = document.getElementById('save-plan');
 const loadButton = document.getElementById('load-plan');
 const exportButton = document.getElementById('export-image');
 const fileInput = document.getElementById('file-input');
+const referenceImageInput = document.getElementById('reference-image-input');
 
 const snapToggle = document.getElementById('snap-toggle');
 const gridToggle = document.getElementById('grid-toggle');
@@ -26,6 +28,11 @@ const zoomMinusButton = document.getElementById('zoom-minus');
 const zoomPlusButton = document.getElementById('zoom-plus');
 const rotateLeftButton = document.getElementById('rotate-left');
 const rotateRightButton = document.getElementById('rotate-right');
+const overlayOpacityInput = document.getElementById('overlay-opacity');
+const overlayOpacityMinusButton = document.getElementById('overlay-opacity-minus');
+const overlayOpacityPlusButton = document.getElementById('overlay-opacity-plus');
+const overlayToggle = document.getElementById('overlay-toggle');
+const clearReferenceImageButton = document.getElementById('clear-reference-image');
 
 const measureTooltip = document.getElementById('measure-tooltip');
 const measureHandle = measureTooltip.querySelector('.tooltip-handle');
@@ -91,7 +98,16 @@ let options = {
   autoSave: true,
   gridSize: 45,
   zoom: 1,
-  dimensionUnit: 'ft-in'
+  dimensionUnit: 'ft-in',
+  overlayOpacity: 40,
+  showOverlay: true
+};
+
+let referenceImageState = {
+  src: null,
+  element: null,
+  width: 0,
+  height: 0
 };
 
 const undoStack = [];
@@ -235,6 +251,44 @@ function drawGrid() {
   }
 
   ctx.restore();
+}
+
+function drawReferenceImage() {
+  if (!options.showOverlay || !referenceImageState.element) return;
+
+  const ratio = Math.min(
+    canvas.width / Math.max(referenceImageState.width, 1),
+    canvas.height / Math.max(referenceImageState.height, 1)
+  );
+  const drawWidth = referenceImageState.width * ratio;
+  const drawHeight = referenceImageState.height * ratio;
+  const offsetX = (canvas.width - drawWidth) / 2;
+  const offsetY = (canvas.height - drawHeight) / 2;
+
+  ctx.save();
+  ctx.globalAlpha = clamp((options.overlayOpacity || 40) / 100, 0.05, 1);
+  ctx.drawImage(referenceImageState.element, offsetX, offsetY, drawWidth, drawHeight);
+  ctx.restore();
+}
+
+function restoreReferenceImage(source) {
+  if (!source) {
+    referenceImageState = { src: null, element: null, width: 0, height: 0 };
+    return;
+  }
+
+  const image = new Image();
+  image.addEventListener('load', () => {
+    referenceImageState = {
+      src: source,
+      element: image,
+      width: image.naturalWidth,
+      height: image.naturalHeight
+    };
+    drawScene();
+    persistIfEnabled();
+  });
+  image.src = source;
 }
 
 
@@ -563,6 +617,7 @@ function buildReferenceMapTemplate() {
 function drawScene() {
   document.body.classList.toggle('hide-grid', !options.showGrid);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawReferenceImage();
   drawGrid();
 
   bins.forEach((bin) => {
@@ -651,7 +706,7 @@ function persist3dContext() {
 
 function persistIfEnabled() {
   if (!options.autoSave) return;
-  const payload = { bins, options };
+  const payload = { bins, options, referenceImage: referenceImageState.src };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   persist3dContext();
 }
@@ -666,7 +721,10 @@ function restoreFromStorage() {
       ...options,
       ...(parsed.options || {})
     };
+    restoreReferenceImage(parsed.referenceImage || null);
     if (!['ft-in', 'in'].includes(options.dimensionUnit)) options.dimensionUnit = 'ft-in';
+    options.overlayOpacity = clamp(Number(options.overlayOpacity) || 40, 5, 100);
+    options.showOverlay = options.showOverlay !== false;
   } catch (_) {
     bins = [];
   }
@@ -690,7 +748,17 @@ function syncOptionsUI() {
   autosaveToggle.checked = options.autoSave;
   gridSizeInput.value = String(options.gridSize);
   zoomLevelInput.value = String(Math.round((options.zoom || 1) * 100));
+  overlayOpacityInput.value = String(clamp(Number(options.overlayOpacity) || 40, 5, 100));
+  overlayToggle.checked = options.showOverlay !== false;
   measureUnitToggle.textContent = options.dimensionUnit === 'in' ? '📏 po' : '📏 pi+po';
+}
+
+function adjustOverlayOpacity(delta) {
+  const next = clamp((Number(overlayOpacityInput.value) || options.overlayOpacity || 40) + delta, 5, 100);
+  options.overlayOpacity = next;
+  overlayOpacityInput.value = String(next);
+  drawScene();
+  persistIfEnabled();
 }
 
 function applyZoom() {
@@ -885,8 +953,10 @@ clearButton.addEventListener('click', () => {
 });
 
 loadReferenceMapButton?.addEventListener('click', () => {
+  const shouldReplace = confirm('Remplacer le plan actuel par la map modèle ? (Annuler = ajouter au plan existant)');
   pushHistory();
-  bins = buildReferenceMapTemplate();
+  const template = buildReferenceMapTemplate();
+  bins = shouldReplace ? template : [...bins, ...template];
   options.showLabels = true;
   options.snapToGrid = true;
   syncOptionsUI();
@@ -895,11 +965,20 @@ loadReferenceMapButton?.addEventListener('click', () => {
   persistIfEnabled();
 });
 
+importReferenceImageButton?.addEventListener('click', () => referenceImageInput?.click());
+
+clearReferenceImageButton?.addEventListener('click', () => {
+  if (!referenceImageState.src) return;
+  restoreReferenceImage(null);
+  drawScene();
+  persistIfEnabled();
+});
+
 undoButton.addEventListener('click', undo);
 redoButton.addEventListener('click', redo);
 
 saveButton.addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify({ bins, options }, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify({ bins, options, referenceImage: referenceImageState.src }, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
@@ -923,7 +1002,10 @@ fileInput.addEventListener('change', async () => {
       ...options,
       ...(data.options || {})
     };
+    restoreReferenceImage(data.referenceImage || null);
     if (!['ft-in', 'in'].includes(options.dimensionUnit)) options.dimensionUnit = 'ft-in';
+    options.overlayOpacity = clamp(Number(options.overlayOpacity) || 40, 5, 100);
+    options.showOverlay = data.options?.showOverlay !== false;
     syncOptionsUI();
     selectBin(null);
     drawScene();
@@ -933,6 +1015,20 @@ fileInput.addEventListener('change', async () => {
   }
 
   fileInput.value = '';
+});
+
+referenceImageInput?.addEventListener('change', () => {
+  const file = referenceImageInput.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.addEventListener('load', () => {
+    if (typeof reader.result !== 'string') return;
+    restoreReferenceImage(reader.result);
+  });
+  reader.readAsDataURL(file);
+
+  referenceImageInput.value = '';
 });
 
 exportButton.addEventListener('click', () => {
@@ -1007,6 +1103,19 @@ zoomLevelInput.addEventListener('change', () => {
 
 zoomMinusButton.addEventListener('click', () => adjustZoom(-10));
 zoomPlusButton.addEventListener('click', () => adjustZoom(10));
+overlayOpacityMinusButton?.addEventListener('click', () => adjustOverlayOpacity(-5));
+overlayOpacityPlusButton?.addEventListener('click', () => adjustOverlayOpacity(5));
+overlayOpacityInput?.addEventListener('change', () => {
+  options.overlayOpacity = clamp(Number(overlayOpacityInput.value) || 40, 5, 100);
+  overlayOpacityInput.value = String(options.overlayOpacity);
+  drawScene();
+  persistIfEnabled();
+});
+overlayToggle?.addEventListener('change', () => {
+  options.showOverlay = overlayToggle.checked;
+  drawScene();
+  persistIfEnabled();
+});
 
 function rotateSelected(delta) {
   const current = bins.find((item) => item.id === selectedId);
