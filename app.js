@@ -1265,6 +1265,15 @@ function rotateSelected(delta) {
 
 rotateLeftButton?.addEventListener('click', () => rotateSelected(-15));
 rotateRightButton?.addEventListener('click', () => rotateSelected(15));
+fields.color?.addEventListener('change', () => {
+  const current = bins.find((item) => item.id === selectedId);
+  if (!current || current.locked) return;
+  if (current.color === fields.color.value) return;
+  pushHistory();
+  current.color = fields.color.value;
+  drawScene();
+  persistIfEnabled();
+});
 fields.rotation?.addEventListener('change', () => {
   const current = bins.find((item) => item.id === selectedId);
   if (!current || current.locked) return;
