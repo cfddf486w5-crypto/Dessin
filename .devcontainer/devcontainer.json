@@ -1,0 +1,13 @@
+{
+  "name": "Dessin Codespace",
+  "image": "mcr.microsoft.com/devcontainers/swift:1-6.0-bookworm",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "sswg.swift-lang",
+        "eamodio.gitlens"
+      ]
+    }
+  },
+  "postCreateCommand": "swift --version"
+}
