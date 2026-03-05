@@ -7,6 +7,10 @@ const renderButton = document.getElementById('render-rack');
 const scene = document.getElementById('rack-scene');
 const tableBody = document.getElementById('alveole-table-body');
 const focusLabel = document.getElementById('focus-zone-label');
+const barHeightPopup = document.getElementById('bar-height-popup');
+const barHeightMinusButton = document.getElementById('bar-height-minus');
+const barHeightPlusButton = document.getElementById('bar-height-plus');
+const barHeightConfirmButton = document.getElementById('bar-height-confirm');
 
 const PIXELS_PER_INCH = 4;
 const STORAGE_KEY = 'dessin-warehouse-plan-v2';
@@ -14,8 +18,11 @@ const VIEW3D_CONTEXT_KEY = 'dessin-view3d-context-v1';
 
 const state = {
   unit: 'ft-in',
-  levelConfigs: []
+  levelConfigs: [],
+  pendingNewBeam: null
 };
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 function inchesToMeters(inches) {
   return inches * 0.0254;
@@ -24,7 +31,6 @@ function inchesToMeters(inches) {
 function metersToInches(meters) {
   return meters / 0.0254;
 }
-
 
 function formatImperialFromMeters(valueMeters) {
   const inches = Math.max(0, Math.round(metersToInches(valueMeters)));
@@ -56,6 +62,30 @@ function createSupport(className) {
   const support = document.createElement('div');
   support.className = `rack-support ${className}`;
   return support;
+}
+
+function hideBarHeightPopup() {
+  if (!barHeightPopup) return;
+  barHeightPopup.hidden = true;
+  state.pendingNewBeam = null;
+}
+
+function setBarPopupPosition(x, y) {
+  if (!barHeightPopup) return;
+  const maxX = window.innerWidth - barHeightPopup.offsetWidth - 8;
+  const maxY = window.innerHeight - barHeightPopup.offsetHeight - 8;
+  barHeightPopup.style.left = `${clamp(x, 8, maxX)}px`;
+  barHeightPopup.style.top = `${clamp(y, 8, maxY)}px`;
+}
+
+function openBarHeightPopup(event, rackHeightMax) {
+  if (!barHeightPopup) return;
+  state.pendingNewBeam = {
+    height: clamp(rackHeightMax / 2, 0.2, Math.max(0.2, rackHeightMax - 0.2)),
+    rackHeightMax
+  };
+  barHeightPopup.hidden = false;
+  setBarPopupPosition(event.clientX - (barHeightPopup.offsetWidth / 2), event.clientY - barHeightPopup.offsetHeight - 10);
 }
 
 function hydrateFromPlanSelection() {
@@ -97,18 +127,14 @@ function ensureLevelConfigs(levelCount, sectionDefault) {
   }));
 }
 
-function renderRack() {
-  const rackWidth = Math.max(0.5, Number.parseFloat(widthInput.value) || 0.5);
-  const rackDepth = Math.max(0.3, Number.parseFloat(depthInput.value) || 0.3);
-  const rackHeightMax = Math.max(1, Number.parseFloat(heightInput.value) || 1);
-  const sectionCount = Math.max(1, Math.floor(Number.parseInt(sectionsInput.value, 10) || 1));
+function buildBeamLevels(rackHeightMax) {
   const beamIntervals = parseBeamHeights();
-
   let cumulative = 0;
   const beamLevels = [0];
+
   beamIntervals.forEach((interval) => {
     const next = cumulative + interval;
-    if (next <= rackHeightMax) {
+    if (next < rackHeightMax) {
       cumulative = next;
       beamLevels.push(cumulative);
     }
@@ -118,6 +144,16 @@ function renderRack() {
     beamLevels.push(Math.min(1.2, rackHeightMax));
   }
 
+  return beamLevels;
+}
+
+function renderRack() {
+  const rackWidth = Math.max(0.5, Number.parseFloat(widthInput.value) || 0.5);
+  const rackDepth = Math.max(0.3, Number.parseFloat(depthInput.value) || 0.3);
+  const rackHeightMax = Math.max(1, Number.parseFloat(heightInput.value) || 1);
+  const sectionCount = Math.max(1, Math.floor(Number.parseInt(sectionsInput.value, 10) || 1));
+  const beamLevels = buildBeamLevels(rackHeightMax);
+
   ensureLevelConfigs(beamLevels.length - 1, sectionCount);
 
   scene.innerHTML = '';
@@ -125,8 +161,10 @@ function renderRack() {
 
   const rackFrame = document.createElement('div');
   rackFrame.className = 'rack-frame';
-  rackFrame.appendChild(createSupport('left'));
-  rackFrame.appendChild(createSupport('right'));
+  const leftSupport = createSupport('left');
+  const rightSupport = createSupport('right');
+  rackFrame.appendChild(leftSupport);
+  rackFrame.appendChild(rightSupport);
 
   const silhouette = document.createElement('div');
   silhouette.className = 'human-scale';
@@ -140,7 +178,7 @@ function renderRack() {
     const yPx = rackHeightPx - beamLevels[i] * pxPerMeter;
     const beam = document.createElement('div');
     beam.className = 'rack-beam';
-    beam.style.top = `${yPx}px`;
+    beam.style.top = `${clamp(yPx, 0, rackHeightPx)}px`;
 
     if (i > 0) {
       const beamAdjuster = document.createElement('div');
@@ -160,7 +198,7 @@ function renderRack() {
   for (let i = 0; i < beamLevels.length - 1; i += 1) {
     const bottom = beamLevels[i];
     const top = beamLevels[i + 1];
-    const alveoleHeight = top - bottom;
+    const alveoleHeight = Math.max(0.05, top - bottom);
     const topPx = rackHeightPx - top * pxPerMeter;
     const heightPx = alveoleHeight * pxPerMeter;
 
@@ -201,19 +239,11 @@ function renderRack() {
     }
   }
 
-  const addBeam = document.createElement('button');
-  addBeam.type = 'button';
-  addBeam.className = 'add-beam-btn';
-  addBeam.textContent = '+ Ajouter une barre';
-  addBeam.addEventListener('click', () => {
-    const heights = parseBeamHeights();
-    heights.push(0.9);
-    beamHeightsInput.value = heights.map((v) => v.toFixed(2)).join(',');
-    renderRack();
-  });
-
-  scene.appendChild(addBeam);
   scene.appendChild(rackFrame);
+
+  [leftSupport, rightSupport].forEach((support) => {
+    support.addEventListener('click', (event) => openBarHeightPopup(event, rackHeightMax));
+  });
 
   rackFrame.addEventListener('click', (event) => {
     const target = event.target;
@@ -234,13 +264,63 @@ function renderRack() {
     if (Number.isInteger(beamIndex)) {
       const heights = parseBeamHeights();
       if (!heights[beamIndex]) return;
-      heights[beamIndex] += target.dataset.action === 'inc' ? 0.1 : -0.1;
-      heights[beamIndex] = Math.min(2.5, Math.max(0.3, heights[beamIndex]));
+      const delta = target.dataset.action === 'inc' ? 0.1 : -0.1;
+      heights[beamIndex] = Math.min(2.5, Math.max(0.3, heights[beamIndex] + delta));
+      const total = heights.reduce((sum, value) => sum + value, 0);
+      if (total >= rackHeightMax - 0.05) {
+        heights[beamIndex] = Math.max(0.3, heights[beamIndex] - delta);
+      }
       beamHeightsInput.value = heights.map((v) => v.toFixed(2)).join(',');
       renderRack();
     }
   });
 }
+
+barHeightMinusButton?.addEventListener('click', () => {
+  if (!state.pendingNewBeam) return;
+  state.pendingNewBeam.height = clamp(state.pendingNewBeam.height - 0.1, 0.2, state.pendingNewBeam.rackHeightMax - 0.1);
+});
+
+barHeightPlusButton?.addEventListener('click', () => {
+  if (!state.pendingNewBeam) return;
+  state.pendingNewBeam.height = clamp(state.pendingNewBeam.height + 0.1, 0.2, state.pendingNewBeam.rackHeightMax - 0.1);
+});
+
+barHeightConfirmButton?.addEventListener('click', () => {
+  if (!state.pendingNewBeam) return;
+  const target = state.pendingNewBeam.height;
+  const rackHeightMax = state.pendingNewBeam.rackHeightMax;
+  const levels = buildBeamLevels(rackHeightMax).slice(1);
+  levels.push(target);
+  levels.sort((a, b) => a - b);
+
+  const intervals = [];
+  let previous = 0;
+  levels.forEach((level) => {
+    const safeLevel = clamp(level, 0.1, rackHeightMax - 0.05);
+    if (safeLevel > previous + 0.05) {
+      intervals.push(Number((safeLevel - previous).toFixed(2)));
+      previous = safeLevel;
+    }
+  });
+
+  beamHeightsInput.value = intervals.join(',');
+  hideBarHeightPopup();
+  renderRack();
+});
+
+window.addEventListener('resize', () => {
+  if (!barHeightPopup || barHeightPopup.hidden) return;
+  const rect = barHeightPopup.getBoundingClientRect();
+  setBarPopupPosition(rect.left, rect.top);
+});
+
+document.addEventListener('click', (event) => {
+  if (!barHeightPopup || barHeightPopup.hidden) return;
+  if (barHeightPopup.contains(event.target)) return;
+  if (event.target.closest('.rack-support')) return;
+  hideBarHeightPopup();
+});
 
 hydrateFromPlanSelection();
 renderButton.addEventListener('click', renderRack);

@@ -35,10 +35,6 @@ const lengthMinusButton = document.getElementById('length-minus');
 const lengthPlusButton = document.getElementById('length-plus');
 const widthMinusButton = document.getElementById('width-minus');
 const widthPlusButton = document.getElementById('width-plus');
-const barHeightPopup = document.getElementById('bar-height-popup');
-const barHeightMinusButton = document.getElementById('bar-height-minus');
-const barHeightPlusButton = document.getElementById('bar-height-plus');
-const barHeightConfirmButton = document.getElementById('bar-height-confirm');
 
 const form = document.getElementById('bin-form');
 const emptyState = document.getElementById('empty-state');
@@ -86,7 +82,6 @@ let startPoint = null;
 let dragOffset = null;
 let tooltipDrag = null;
 let activePresetBin = null;
-let popupBinId = null;
 
 let options = {
   snapToGrid: true,
@@ -392,9 +387,6 @@ function setMode(nextMode) {
   mode = nextMode;
   drawButton.classList.toggle('active', mode === 'draw');
   selectButton.classList.toggle('active', mode === 'select');
-  if (mode !== 'select') {
-    hideBarHeightPopup();
-  }
 }
 
 function hitTest(x, y) {
@@ -433,10 +425,8 @@ function selectBin(bin) {
 
   if (bin) {
     updateMeasureTooltip(bin.width, bin.height);
-    showBarHeightPopup(bin);
   } else {
     updateMeasureTooltip();
-    hideBarHeightPopup();
   }
 
   persist3dContext();
@@ -459,33 +449,6 @@ function setTooltipPosition(x, y) {
   measureTooltip.style.bottom = 'auto';
   measureTooltip.style.transform = 'none';
 }
-
-function setBarPopupPosition(x, y) {
-  if (!barHeightPopup) return;
-  const maxX = window.innerWidth - barHeightPopup.offsetWidth - 8;
-  const maxY = window.innerHeight - barHeightPopup.offsetHeight - 8;
-  const left = clamp(x, 8, maxX);
-  const top = clamp(y, 8, maxY);
-  barHeightPopup.style.left = `${left}px`;
-  barHeightPopup.style.top = `${top}px`;
-}
-
-function hideBarHeightPopup() {
-  if (!barHeightPopup) return;
-  barHeightPopup.hidden = true;
-  popupBinId = null;
-}
-
-function showBarHeightPopup(bin) {
-  if (!barHeightPopup || !bin) return;
-  popupBinId = bin.id;
-  barHeightPopup.hidden = false;
-  const rect = canvas.getBoundingClientRect();
-  const centerX = rect.left + ((bin.x + (bin.width / 2)) / canvas.width) * rect.width;
-  const topY = rect.top + (bin.y / canvas.height) * rect.height;
-  setBarPopupPosition(centerX - (barHeightPopup.offsetWidth / 2), topY - barHeightPopup.offsetHeight - 8);
-}
-
 
 function persist3dContext() {
   const selectedBin = bins.find((item) => item.id === selectedId) || null;
@@ -565,8 +528,7 @@ function adjustZoom(deltaPercent) {
 }
 
 function adjustSelectedDimension(dimension, deltaCells) {
-  const targetId = popupBinId || selectedId;
-  const current = bins.find((item) => item.id === targetId);
+  const current = bins.find((item) => item.id === selectedId);
   if (!current || current.locked) return;
 
   pushHistory();
@@ -576,9 +538,6 @@ function adjustSelectedDimension(dimension, deltaCells) {
   const position = key === 'width' ? current.x : current.y;
   current[key] = clamp(current[key] + delta, 20, limit - position);
   updateMeasureTooltip(current.width, current.height);
-  if (current.id === popupBinId) {
-    showBarHeightPopup(current);
-  }
   drawScene();
   persistIfEnabled();
 }
@@ -667,7 +626,6 @@ canvas.addEventListener('pointerup', (event) => {
       persistIfEnabled();
     } else {
       updateMeasureTooltip();
-      hideBarHeightPopup();
     }
 
     startPoint = null;
@@ -724,7 +682,6 @@ deleteButton.addEventListener('click', () => {
   pushHistory();
   bins = bins.filter((bin) => bin.id !== selectedId);
   selectBin(null);
-  hideBarHeightPopup();
   drawScene();
   persistIfEnabled();
 });
@@ -734,7 +691,6 @@ clearButton.addEventListener('click', () => {
   pushHistory();
   bins = [];
   selectBin(null);
-  hideBarHeightPopup();
   drawScene();
   persistIfEnabled();
 });
@@ -878,9 +834,6 @@ lengthMinusButton.addEventListener('click', () => adjustSelectedDimension('heigh
 lengthPlusButton.addEventListener('click', () => adjustSelectedDimension('height', 1));
 widthMinusButton.addEventListener('click', () => adjustSelectedDimension('width', -1));
 widthPlusButton.addEventListener('click', () => adjustSelectedDimension('width', 1));
-barHeightMinusButton?.addEventListener('click', () => adjustSelectedDimension('height', -1));
-barHeightPlusButton?.addEventListener('click', () => adjustSelectedDimension('height', 1));
-barHeightConfirmButton?.addEventListener('click', hideBarHeightPopup);
 
 window.addEventListener('keydown', (event) => {
   const inInput = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '');
@@ -947,10 +900,6 @@ measureUnitToggle.addEventListener('click', () => {
 window.addEventListener('resize', () => {
   const rect = measureTooltip.getBoundingClientRect();
   setTooltipPosition(rect.left, rect.top);
-  const current = bins.find((item) => item.id === popupBinId);
-  if (current) {
-    showBarHeightPopup(current);
-  }
 });
 
 
