@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Warehouse Planner iPhone</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Warehouse Planner</h1>
+      <p>Dessine ton plan et renseigne les infos de bins.</p>
+    </header>
+
+    <main>
+      <section class="toolbar">
+        <button id="draw-mode" class="active">Tracer bin</button>
+        <button id="select-mode">Sélectionner</button>
+        <button id="delete-bin">Supprimer</button>
+        <button id="clear-all">Tout effacer</button>
+      </section>
+
+      <section class="board-wrap">
+        <canvas id="warehouse-canvas" width="900" height="1300"></canvas>
+      </section>
+
+      <section class="panel" id="details-panel">
+        <h2>Infos bin</h2>
+        <p id="empty-state">Sélectionne un bin pour renseigner ses données.</p>
+
+        <form id="bin-form" hidden>
+          <label>
+            Nom du bin
+            <input type="text" id="bin-name" placeholder="Ex: Bin A-12" />
+          </label>
+
+          <label>
+            Location
+            <input type="text" id="bin-location" placeholder="Ex: Rangée 4, colonne 2" />
+          </label>
+
+          <label>
+            Section
+            <input type="text" id="bin-section" placeholder="Ex: Picking" />
+          </label>
+
+          <label>
+            Zone
+            <input type="text" id="bin-zone" placeholder="Ex: Zone froide" />
+          </label>
+
+          <label>
+            Notes
+            <textarea id="bin-notes" rows="3" placeholder="Infos supplémentaires..."></textarea>
+          </label>
+
+          <button type="submit">Enregistrer les infos</button>
+        </form>
+      </section>
+
+      <section class="toolbar secondary">
+        <button id="save-plan">Sauvegarder JSON</button>
+        <button id="load-plan">Charger JSON</button>
+        <button id="export-image">Exporter PNG</button>
+        <input type="file" id="file-input" accept="application/json" hidden />
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

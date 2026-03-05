@@ -1,21 +1,29 @@
 # Dessin – Layout d'entrepôt sur iPhone
 
-Prototype SwiftUI d'une app iPhone pour dessiner avec un stylet (Apple Pencil) et créer/modifier un plan de racks d'entrepôt.
+Prototype d'app orientée iPhone pour dessiner un plan de warehouse et gérer des informations de bins.
 
-## Fonctionnalités
-- Création de racks par **glisser-déposer** sur la zone de plan.
-- Sélection d'un rack avec affichage de ses dimensions.
-- Déplacement d'un rack sélectionné.
-- Changement de type de rack (palette, picking, froid, zone libre).
-- Zoom et déplacement de la carte (pinch + drag avec deux doigts).
-- Sauvegarde locale JSON.
+## Version HTML (nouvelle)
+Cette version Web fonctionne sur iPhone (Safari) et permet de :
+- tracer des bins directement sur un canevas tactile,
+- sélectionner et déplacer un bin,
+- renseigner les données d'un bin (nom, location, section, zone, notes),
+- supprimer un bin ou effacer tout le plan,
+- sauvegarder/charger le plan en JSON,
+- exporter le plan en PNG.
 
-## Structure
-- `DessinApp.swift` : point d'entrée.
-- `ContentView.swift` : shell principal + barre d'outils.
-- `WarehouseCanvasView.swift` : zone de dessin interactive.
-- `RackModels.swift` : modèles de données.
-- `WarehouseStore.swift` : persistance locale.
+### Lancer localement
+```bash
+python3 -m http.server 8000
+```
+Puis ouvrir `http://localhost:8000`.
+
+## Ancien prototype SwiftUI
+Le dépôt contient aussi une base SwiftUI historique :
+- `DessinApp.swift`
+- `ContentView.swift`
+- `WarehouseCanvasView.swift`
+- `RackModels.swift`
+- `WarehouseStore.swift`
 
 ## Travailler sur un host GitHub (Codespaces)
 Le dépôt est prêt pour être ouvert dans un environnement hébergé par GitHub.
@@ -24,13 +32,3 @@ Le dépôt est prêt pour être ouvert dans un environnement hébergé par GitHu
 2. Cliquez sur **Code** → **Codespaces** → **Create codespace on main** (ou votre branche).
 3. GitHub démarre automatiquement le conteneur défini dans `.devcontainer/devcontainer.json`.
 4. Le terminal exécute `swift --version` au premier démarrage pour vérifier l'environnement.
-
-Ce mode est idéal pour contribuer rapidement sans configuration locale initiale.
-
-## Vérification continue (GitHub Actions)
-Le workflow `.github/workflows/repo-checks.yml` lance à chaque push/pull request :
-- vérification de la présence des fichiers source principaux,
-- validation du JSON de configuration Codespaces.
-
-## Intégration Xcode
-Créez un projet iOS SwiftUI nommé `Dessin`, puis remplacez les fichiers générés par ceux du dépôt.
