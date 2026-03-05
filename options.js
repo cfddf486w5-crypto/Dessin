@@ -29,6 +29,13 @@ const uiLabels = [
 
 const layoutOptions = [
   { key: 'boardOneKilometer', label: 'Tableau 1 km' },
+  { key: 'presetBinP1', label: 'Menu P1 · Bin 50" x 50"' },
+  { key: 'presetBinP2', label: 'Menu P2 · Bin 50" x 100"' },
+  { key: 'presetBinP3', label: 'Menu P3 · Bin 50" x 150"' },
+  { key: 'presetBinP4', label: 'Menu P4 · Bin 50" x 200"' },
+  { key: 'presetBinP5', label: 'Menu P5 · Bin 50" x 250"' },
+  { key: 'presetBinP6', label: 'Menu P6 · Bin 50" x 300"' },
+  { key: 'presetBinP7', label: 'Menu P7 · Bin 50" x 350"' },
   { key: 'layout_02', label: 'Deux colonnes fixes' },
   { key: 'layout_03', label: 'Trois colonnes fixes' },
   { key: 'layout_04', label: 'Quatre colonnes fixes' },
@@ -60,15 +67,12 @@ const layoutOptions = [
   { key: 'layout_30', label: 'Fond section contrasté' },
   { key: 'layout_31', label: 'Accents bleus' },
   { key: 'layout_32', label: 'Accents violets' },
-  { key: 'layout_33', label: 'Compteur activé' },
-  { key: 'layout_34', label: 'Compteur discret' },
-  { key: 'layout_35', label: 'Animation hover' },
-  { key: 'layout_36', label: 'Animation désactivée' },
-  { key: 'layout_37', label: 'Texte compact' },
-  { key: 'layout_38', label: 'Texte confortable' },
-  { key: 'layout_39', label: 'Contour section renforcé' },
-  { key: 'layout_40', label: 'Fond dégradé premium' }
+  { key: 'layout_33', label: 'Compteur activé' }
 ];
+
+function isPresetBinOption(key) {
+  return key.startsWith('presetBinP');
+}
 
 function loadState() {
   try {
@@ -97,8 +101,21 @@ function createToggle(container, bucket, key, label) {
 
   const input = document.createElement('input');
   input.type = 'checkbox';
+  input.dataset.optionKey = key;
   input.checked = Boolean(state[bucket][key]);
   input.addEventListener('change', () => {
+    if (bucket === 'layout' && isPresetBinOption(key) && input.checked) {
+      Object.keys(state.layout).forEach((layoutKey) => {
+        if (layoutKey !== key && isPresetBinOption(layoutKey)) {
+          state.layout[layoutKey] = false;
+        }
+      });
+      layoutContainer.querySelectorAll('input').forEach((item) => {
+        if (item !== input && isPresetBinOption(item.dataset.optionKey || '')) {
+          item.checked = false;
+        }
+      });
+    }
     state[bucket][key] = input.checked;
     saveState();
     applyPreview();
