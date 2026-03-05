@@ -294,3 +294,41 @@ select {
   padding: 8px;
   background: white;
 }
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.options-link {
+  text-decoration: none;
+  background: #e4ecff;
+  color: #1f4ecf;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.rotation-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.rotation-actions button {
+  border: none;
+  border-radius: 10px;
+  padding: 8px;
+  background: #eef3ff;
+  color: #264ba1;
+  font-weight: 700;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}

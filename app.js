@@ -23,6 +23,8 @@ const gridSizePlusButton = document.getElementById('grid-size-plus');
 const zoomLevelInput = document.getElementById('zoom-level');
 const zoomMinusButton = document.getElementById('zoom-minus');
 const zoomPlusButton = document.getElementById('zoom-plus');
+const rotateLeftButton = document.getElementById('rotate-left');
+const rotateRightButton = document.getElementById('rotate-right');
 
 const measureTooltip = document.getElementById('measure-tooltip');
 const measureHandle = measureTooltip.querySelector('.tooltip-handle');
@@ -44,11 +46,13 @@ const fields = {
   type: document.getElementById('bin-type'),
   notes: document.getElementById('bin-notes'),
   color: document.getElementById('bin-color'),
+  rotation: document.getElementById('bin-rotation'),
   locked: document.getElementById('bin-locked')
 };
 
 const PIXELS_PER_INCH = 4;
 const STORAGE_KEY = 'dessin-warehouse-plan-v2';
+const ADVANCED_OPTIONS_KEY = 'dessin-advanced-options-v1';
 
 let mode = 'draw';
 let bins = [];
@@ -90,6 +94,7 @@ function normalizeBin(raw) {
     notes: raw.notes || '',
     type: ['zone', 'section', 'bin'].includes(raw.type) ? raw.type : 'bin',
     color: raw.color || '#9bb7ff',
+    rotation: ((Number(raw.rotation) || 0) % 360 + 360) % 360,
     locked: Boolean(raw.locked)
   };
 }
@@ -209,6 +214,62 @@ function drawGrid() {
   ctx.restore();
 }
 
+
+function pointInsideRotatedBin(x, y, bin) {
+  const angle = (bin.rotation || 0) * Math.PI / 180;
+  const cx = bin.x + bin.width / 2;
+  const cy = bin.y + bin.height / 2;
+  const dx = x - cx;
+  const dy = y - cy;
+  const cos = Math.cos(-angle);
+  const sin = Math.sin(-angle);
+  const rx = dx * cos - dy * sin + cx;
+  const ry = dx * sin + dy * cos + cy;
+
+  return rx >= bin.x && rx <= bin.x + bin.width && ry >= bin.y && ry <= bin.y + bin.height;
+}
+
+function drawRotatedBin(bin, selected) {
+  const angle = (bin.rotation || 0) * Math.PI / 180;
+  const cx = bin.x + bin.width / 2;
+  const cy = bin.y + bin.height / 2;
+  const binColor = bin.color || '#9bb7ff';
+  const type = ['zone', 'section', 'bin'].includes(bin.type) ? bin.type : 'bin';
+  const alphaByType = { zone: 0.12, section: 0.22, bin: 0.34 };
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+
+  ctx.fillStyle = colorWithAlpha(binColor, alphaByType[type]);
+  ctx.fillRect(-bin.width / 2, -bin.height / 2, bin.width, bin.height);
+
+  ctx.strokeStyle = selected ? '#1f4ecf' : '#4a6ad3';
+  ctx.lineWidth = selected ? 3 : 1.6;
+  ctx.strokeRect(-bin.width / 2, -bin.height / 2, bin.width, bin.height);
+
+  if (bin.locked) {
+    ctx.fillStyle = '#0f1f43';
+    ctx.font = '20px -apple-system, sans-serif';
+    ctx.fillText('🔒', bin.width / 2 - 26, -bin.height / 2 + 24);
+  }
+
+  if (options.showLabels) {
+    ctx.fillStyle = '#0f1f43';
+    ctx.font = '24px -apple-system, sans-serif';
+    const title = bin.name?.trim() || 'Bin sans nom';
+    ctx.fillText(title, -bin.width / 2 + 10, -bin.height / 2 + 30);
+
+    ctx.fillStyle = '#233f8a';
+    ctx.font = '18px -apple-system, sans-serif';
+    ctx.fillText(`Type: ${type}`, -bin.width / 2 + 10, -bin.height / 2 + 56);
+    ctx.fillText(`Zone: ${bin.zone || 'N/A'}`, -bin.width / 2 + 10, -bin.height / 2 + 78);
+    ctx.fillText(`Section: ${bin.section || 'N/A'}`, -bin.width / 2 + 10, -bin.height / 2 + 100);
+  }
+
+  ctx.restore();
+}
+
 function drawScene() {
   document.body.classList.toggle('hide-grid', !options.showGrid);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -216,40 +277,7 @@ function drawScene() {
 
   bins.forEach((bin) => {
     const selected = bin.id === selectedId;
-    const binColor = bin.color || '#9bb7ff';
-    const type = ['zone', 'section', 'bin'].includes(bin.type) ? bin.type : 'bin';
-    const alphaByType = {
-      zone: 0.12,
-      section: 0.22,
-      bin: 0.34
-    };
-    const baseAlpha = alphaByType[type];
-
-    ctx.fillStyle = colorWithAlpha(binColor, baseAlpha);
-    ctx.fillRect(bin.x, bin.y, bin.width, bin.height);
-
-    ctx.strokeStyle = selected ? '#1f4ecf' : '#4a6ad3';
-    ctx.lineWidth = selected ? 3 : 1.6;
-    ctx.strokeRect(bin.x, bin.y, bin.width, bin.height);
-
-    if (bin.locked) {
-      ctx.fillStyle = '#0f1f43';
-      ctx.font = '20px -apple-system, sans-serif';
-      ctx.fillText('🔒', bin.x + bin.width - 26, bin.y + 24);
-    }
-
-    if (options.showLabels) {
-      ctx.fillStyle = '#0f1f43';
-      ctx.font = '24px -apple-system, sans-serif';
-      const title = bin.name?.trim() || 'Bin sans nom';
-      ctx.fillText(title, bin.x + 10, bin.y + 30);
-
-      ctx.fillStyle = '#233f8a';
-      ctx.font = '18px -apple-system, sans-serif';
-      ctx.fillText(`Type: ${type}`, bin.x + 10, bin.y + 56);
-      ctx.fillText(`Zone: ${bin.zone || 'N/A'}`, bin.x + 10, bin.y + 78);
-      ctx.fillText(`Section: ${bin.section || 'N/A'}`, bin.x + 10, bin.y + 100);
-    }
+    drawRotatedBin(bin, selected);
   });
 }
 
@@ -262,7 +290,7 @@ function setMode(nextMode) {
 function hitTest(x, y) {
   for (let i = bins.length - 1; i >= 0; i -= 1) {
     const bin = bins[i];
-    if (x >= bin.x && x <= bin.x + bin.width && y >= bin.y && y <= bin.y + bin.height) {
+    if (pointInsideRotatedBin(x, y, bin)) {
       return bin;
     }
   }
@@ -285,6 +313,7 @@ function showForm(bin) {
   fields.type.value = ['zone', 'section', 'bin'].includes(bin.type) ? bin.type : 'bin';
   fields.notes.value = bin.notes || '';
   fields.color.value = bin.color || '#9bb7ff';
+  fields.rotation.value = String(Math.round(bin.rotation || 0));
   fields.locked.checked = Boolean(bin.locked);
 }
 
@@ -502,6 +531,8 @@ form.addEventListener('submit', (event) => {
   current.type = inferTypeFromFields();
   fields.type.value = current.type;
   current.color = fields.color.value;
+  current.rotation = ((Number(fields.rotation.value) || 0) % 360 + 360) % 360;
+  fields.rotation.value = String(Math.round(current.rotation));
   current.locked = fields.locked.checked;
 
   drawScene();
@@ -637,6 +668,28 @@ zoomLevelInput.addEventListener('change', () => {
 zoomMinusButton.addEventListener('click', () => adjustZoom(-10));
 zoomPlusButton.addEventListener('click', () => adjustZoom(10));
 
+function rotateSelected(delta) {
+  const current = bins.find((item) => item.id === selectedId);
+  if (!current || current.locked) return;
+  pushHistory();
+  current.rotation = ((current.rotation || 0) + delta + 360) % 360;
+  fields.rotation.value = String(Math.round(current.rotation));
+  drawScene();
+  persistIfEnabled();
+}
+
+rotateLeftButton?.addEventListener('click', () => rotateSelected(-15));
+rotateRightButton?.addEventListener('click', () => rotateSelected(15));
+fields.rotation?.addEventListener('change', () => {
+  const current = bins.find((item) => item.id === selectedId);
+  if (!current || current.locked) return;
+  pushHistory();
+  current.rotation = ((Number(fields.rotation.value) || 0) % 360 + 360) % 360;
+  fields.rotation.value = String(Math.round(current.rotation));
+  drawScene();
+  persistIfEnabled();
+});
+
 lengthMinusButton.addEventListener('click', () => adjustSelectedDimension('height', -1));
 lengthPlusButton.addEventListener('click', () => adjustSelectedDimension('height', 1));
 widthMinusButton.addEventListener('click', () => adjustSelectedDimension('width', -1));
@@ -709,6 +762,21 @@ window.addEventListener('resize', () => {
   setTooltipPosition(rect.left, rect.top);
 });
 
+function restoreAdvancedOptions() {
+  try {
+    const saved = localStorage.getItem(ADVANCED_OPTIONS_KEY);
+    if (!saved) return;
+    const parsed = JSON.parse(saved);
+    if (parsed.layout?.boardOneKilometer === true) {
+      canvas.width = 3000;
+      canvas.height = 3000;
+    }
+  } catch (_) {
+    // ignore
+  }
+}
+
+restoreAdvancedOptions();
 restoreFromStorage();
 syncOptionsUI();
 applyZoom();
