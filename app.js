@@ -18,12 +18,21 @@ const gridToggle = document.getElementById('grid-toggle');
 const labelsToggle = document.getElementById('labels-toggle');
 const autosaveToggle = document.getElementById('autosave-toggle');
 const gridSizeInput = document.getElementById('grid-size');
+const gridSizeMinusButton = document.getElementById('grid-size-minus');
+const gridSizePlusButton = document.getElementById('grid-size-plus');
+const zoomLevelInput = document.getElementById('zoom-level');
+const zoomMinusButton = document.getElementById('zoom-minus');
+const zoomPlusButton = document.getElementById('zoom-plus');
 
 const measureTooltip = document.getElementById('measure-tooltip');
 const measureHandle = measureTooltip.querySelector('.tooltip-handle');
 const lengthLabel = document.getElementById('measure-length');
 const widthLabel = document.getElementById('measure-width');
 const measureUnitToggle = document.getElementById('measure-unit-toggle');
+const lengthMinusButton = document.getElementById('length-minus');
+const lengthPlusButton = document.getElementById('length-plus');
+const widthMinusButton = document.getElementById('width-minus');
+const widthPlusButton = document.getElementById('width-plus');
 
 const form = document.getElementById('bin-form');
 const emptyState = document.getElementById('empty-state');
@@ -32,6 +41,7 @@ const fields = {
   location: document.getElementById('bin-location'),
   section: document.getElementById('bin-section'),
   zone: document.getElementById('bin-zone'),
+  type: document.getElementById('bin-type'),
   notes: document.getElementById('bin-notes'),
   color: document.getElementById('bin-color'),
   locked: document.getElementById('bin-locked')
@@ -53,6 +63,7 @@ let options = {
   showLabels: true,
   autoSave: true,
   gridSize: 45,
+  zoom: 1,
   dimensionUnit: 'ft-in'
 };
 
@@ -77,6 +88,7 @@ function normalizeBin(raw) {
     section: raw.section || '',
     zone: raw.zone || '',
     notes: raw.notes || '',
+    type: ['zone', 'section', 'bin'].includes(raw.type) ? raw.type : 'bin',
     color: raw.color || '#9bb7ff',
     locked: Boolean(raw.locked)
   };
@@ -205,30 +217,16 @@ function drawScene() {
   bins.forEach((bin) => {
     const selected = bin.id === selectedId;
     const binColor = bin.color || '#9bb7ff';
+    const type = ['zone', 'section', 'bin'].includes(bin.type) ? bin.type : 'bin';
+    const alphaByType = {
+      zone: 0.12,
+      section: 0.22,
+      bin: 0.34
+    };
+    const baseAlpha = alphaByType[type];
 
-    // Zone = ultra pâle
-    ctx.fillStyle = colorWithAlpha(binColor, 0.12);
+    ctx.fillStyle = colorWithAlpha(binColor, baseAlpha);
     ctx.fillRect(bin.x, bin.y, bin.width, bin.height);
-
-    // Section = un peu plus visible
-    const sectionInset = Math.min(bin.width, bin.height) * 0.08;
-    ctx.fillStyle = colorWithAlpha(binColor, 0.2);
-    ctx.fillRect(
-      bin.x + sectionInset,
-      bin.y + sectionInset,
-      Math.max(1, bin.width - sectionInset * 2),
-      Math.max(1, bin.height - sectionInset * 2)
-    );
-
-    // Bin = le plus foncé mais transparent pour voir la grille
-    const binInset = Math.min(bin.width, bin.height) * 0.18;
-    ctx.fillStyle = colorWithAlpha(binColor, 0.34);
-    ctx.fillRect(
-      bin.x + binInset,
-      bin.y + binInset,
-      Math.max(1, bin.width - binInset * 2),
-      Math.max(1, bin.height - binInset * 2)
-    );
 
     ctx.strokeStyle = selected ? '#1f4ecf' : '#4a6ad3';
     ctx.lineWidth = selected ? 3 : 1.6;
@@ -248,8 +246,9 @@ function drawScene() {
 
       ctx.fillStyle = '#233f8a';
       ctx.font = '18px -apple-system, sans-serif';
-      ctx.fillText(`Zone: ${bin.zone || 'N/A'}`, bin.x + 10, bin.y + 56);
-      ctx.fillText(`Section: ${bin.section || 'N/A'}`, bin.x + 10, bin.y + 78);
+      ctx.fillText(`Type: ${type}`, bin.x + 10, bin.y + 56);
+      ctx.fillText(`Zone: ${bin.zone || 'N/A'}`, bin.x + 10, bin.y + 78);
+      ctx.fillText(`Section: ${bin.section || 'N/A'}`, bin.x + 10, bin.y + 100);
     }
   });
 }
@@ -283,6 +282,7 @@ function showForm(bin) {
   fields.location.value = bin.location || '';
   fields.section.value = bin.section || '';
   fields.zone.value = bin.zone || '';
+  fields.type.value = ['zone', 'section', 'bin'].includes(bin.type) ? bin.type : 'bin';
   fields.notes.value = bin.notes || '';
   fields.color.value = bin.color || '#9bb7ff';
   fields.locked.checked = Boolean(bin.locked);
@@ -340,13 +340,63 @@ function restoreFromStorage() {
   }
 }
 
+
+function inferTypeFromFields() {
+  const typeText = [fields.type.value, fields.zone.value, fields.section.value, fields.name.value]
+    .join(' ')
+    .toLowerCase();
+  if (typeText.includes('zone')) return 'zone';
+  if (typeText.includes('section')) return 'section';
+  if (typeText.includes('bin')) return 'bin';
+  return fields.type.value || 'bin';
+}
+
 function syncOptionsUI() {
   snapToggle.checked = options.snapToGrid;
   gridToggle.checked = options.showGrid;
   labelsToggle.checked = options.showLabels;
   autosaveToggle.checked = options.autoSave;
   gridSizeInput.value = String(options.gridSize);
+  zoomLevelInput.value = String(Math.round((options.zoom || 1) * 100));
   measureUnitToggle.textContent = options.dimensionUnit === 'in' ? '📏 po' : '📏 pi+po';
+}
+
+function applyZoom() {
+  const scale = clamp(options.zoom || 1, 0.5, 2);
+  options.zoom = scale;
+  canvas.style.width = `${scale * 100}%`;
+}
+
+function adjustGridSize(delta) {
+  const next = clamp((Number(gridSizeInput.value) || options.gridSize) + delta, 10, 120);
+  options.gridSize = next;
+  gridSizeInput.value = String(next);
+  drawScene();
+  persistIfEnabled();
+}
+
+function adjustZoom(deltaPercent) {
+  const currentPercent = Number(zoomLevelInput.value) || Math.round((options.zoom || 1) * 100);
+  const nextPercent = clamp(currentPercent + deltaPercent, 50, 200);
+  options.zoom = nextPercent / 100;
+  zoomLevelInput.value = String(nextPercent);
+  applyZoom();
+  persistIfEnabled();
+}
+
+function adjustSelectedDimension(dimension, deltaCells) {
+  const current = bins.find((item) => item.id === selectedId);
+  if (!current || current.locked) return;
+
+  pushHistory();
+  const delta = Math.max(5, options.gridSize / 2) * deltaCells;
+  const key = dimension === 'width' ? 'width' : 'height';
+  const limit = key === 'width' ? canvas.width : canvas.height;
+  const position = key === 'width' ? current.x : current.y;
+  current[key] = clamp(current[key] + delta, 20, limit - position);
+  updateMeasureTooltip(current.width, current.height);
+  drawScene();
+  persistIfEnabled();
 }
 
 canvas.addEventListener('pointerdown', (event) => {
@@ -449,6 +499,8 @@ form.addEventListener('submit', (event) => {
   current.section = fields.section.value;
   current.zone = fields.zone.value;
   current.notes = fields.notes.value;
+  current.type = inferTypeFromFields();
+  fields.type.value = current.type;
   current.color = fields.color.value;
   current.locked = fields.locked.checked;
 
@@ -571,6 +623,25 @@ gridSizeInput.addEventListener('change', () => {
   persistIfEnabled();
 });
 
+gridSizeMinusButton.addEventListener('click', () => adjustGridSize(-5));
+gridSizePlusButton.addEventListener('click', () => adjustGridSize(5));
+
+zoomLevelInput.addEventListener('change', () => {
+  const next = clamp(Number(zoomLevelInput.value) || 100, 50, 200);
+  options.zoom = next / 100;
+  zoomLevelInput.value = String(next);
+  applyZoom();
+  persistIfEnabled();
+});
+
+zoomMinusButton.addEventListener('click', () => adjustZoom(-10));
+zoomPlusButton.addEventListener('click', () => adjustZoom(10));
+
+lengthMinusButton.addEventListener('click', () => adjustSelectedDimension('height', -1));
+lengthPlusButton.addEventListener('click', () => adjustSelectedDimension('height', 1));
+widthMinusButton.addEventListener('click', () => adjustSelectedDimension('width', -1));
+widthPlusButton.addEventListener('click', () => adjustSelectedDimension('width', 1));
+
 window.addEventListener('keydown', (event) => {
   const inInput = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '');
   if (inInput) return;
@@ -640,5 +711,6 @@ window.addEventListener('resize', () => {
 
 restoreFromStorage();
 syncOptionsUI();
+applyZoom();
 updateMeasureTooltip();
 drawScene();
