@@ -80,21 +80,22 @@ const fields = {
 
 const PIXELS_PER_INCH = 4;
 const SMALL_GRID_CELL_INCHES = 1;
-const MASTER_GRID_DIVISIONS = 50;
-const MASTER_SQUARE_INCHES = SMALL_GRID_CELL_INCHES * MASTER_GRID_DIVISIONS;
+const BIG_GRID_CELL_INCHES = 50;
+const MASTER_GRID_DIVISIONS = BIG_GRID_CELL_INCHES / SMALL_GRID_CELL_INCHES;
+const MASTER_SQUARE_INCHES = BIG_GRID_CELL_INCHES;
 const MASTER_SQUARE_PIXELS = MASTER_SQUARE_INCHES * PIXELS_PER_INCH;
 const STORAGE_KEY = 'dessin-warehouse-plan-v2';
 const ADVANCED_OPTIONS_KEY = 'dessin-advanced-options-v1';
 const VIEW3D_CONTEXT_KEY = 'dessin-view3d-context-v1';
 
 const PRESET_BIN_OPTIONS = {
-  presetBinP1: { width: 50 * PIXELS_PER_INCH, height: 50 * PIXELS_PER_INCH },
-  presetBinP2: { width: 50 * PIXELS_PER_INCH, height: 100 * PIXELS_PER_INCH },
-  presetBinP3: { width: 50 * PIXELS_PER_INCH, height: 150 * PIXELS_PER_INCH },
-  presetBinP4: { width: 50 * PIXELS_PER_INCH, height: 200 * PIXELS_PER_INCH },
-  presetBinP5: { width: 50 * PIXELS_PER_INCH, height: 250 * PIXELS_PER_INCH },
-  presetBinP6: { width: 50 * PIXELS_PER_INCH, height: 300 * PIXELS_PER_INCH },
-  presetBinP7: { width: 50 * PIXELS_PER_INCH, height: 350 * PIXELS_PER_INCH }
+  presetBinP1: { width: BIG_GRID_CELL_INCHES * PIXELS_PER_INCH, height: BIG_GRID_CELL_INCHES * PIXELS_PER_INCH },
+  presetBinP2: { width: BIG_GRID_CELL_INCHES * PIXELS_PER_INCH, height: 100 * PIXELS_PER_INCH },
+  presetBinP3: { width: BIG_GRID_CELL_INCHES * PIXELS_PER_INCH, height: 150 * PIXELS_PER_INCH },
+  presetBinP4: { width: BIG_GRID_CELL_INCHES * PIXELS_PER_INCH, height: 200 * PIXELS_PER_INCH },
+  presetBinP5: { width: BIG_GRID_CELL_INCHES * PIXELS_PER_INCH, height: 250 * PIXELS_PER_INCH },
+  presetBinP6: { width: BIG_GRID_CELL_INCHES * PIXELS_PER_INCH, height: 300 * PIXELS_PER_INCH },
+  presetBinP7: { width: BIG_GRID_CELL_INCHES * PIXELS_PER_INCH, height: 350 * PIXELS_PER_INCH }
 };
 
 let mode = 'draw';
