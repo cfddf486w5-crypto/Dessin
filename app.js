@@ -3,12 +3,21 @@ const ctx = canvas.getContext('2d');
 
 const drawButton = document.getElementById('draw-mode');
 const selectButton = document.getElementById('select-mode');
+const duplicateButton = document.getElementById('duplicate-bin');
 const deleteButton = document.getElementById('delete-bin');
 const clearButton = document.getElementById('clear-all');
+const undoButton = document.getElementById('undo-action');
+const redoButton = document.getElementById('redo-action');
 const saveButton = document.getElementById('save-plan');
 const loadButton = document.getElementById('load-plan');
 const exportButton = document.getElementById('export-image');
 const fileInput = document.getElementById('file-input');
+
+const snapToggle = document.getElementById('snap-toggle');
+const gridToggle = document.getElementById('grid-toggle');
+const labelsToggle = document.getElementById('labels-toggle');
+const autosaveToggle = document.getElementById('autosave-toggle');
+const gridSizeInput = document.getElementById('grid-size');
 
 const measureTooltip = document.getElementById('measure-tooltip');
 const measureHandle = measureTooltip.querySelector('.tooltip-handle');
@@ -22,10 +31,13 @@ const fields = {
   location: document.getElementById('bin-location'),
   section: document.getElementById('bin-section'),
   zone: document.getElementById('bin-zone'),
-  notes: document.getElementById('bin-notes')
+  notes: document.getElementById('bin-notes'),
+  color: document.getElementById('bin-color'),
+  locked: document.getElementById('bin-locked')
 };
 
 const PIXELS_PER_INCH = 4;
+const STORAGE_KEY = 'dessin-warehouse-plan-v2';
 
 let mode = 'draw';
 let bins = [];
@@ -34,7 +46,69 @@ let startPoint = null;
 let dragOffset = null;
 let tooltipDrag = null;
 
+let options = {
+  snapToGrid: true,
+  showGrid: true,
+  showLabels: true,
+  autoSave: true,
+  gridSize: 45
+};
+
+const undoStack = [];
+const redoStack = [];
+
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+function deepCloneBins(source) {
+  return source.map((bin) => ({ ...bin }));
+}
+
+function normalizeBin(raw) {
+  return {
+    id: typeof raw.id === 'string' ? raw.id : crypto.randomUUID(),
+    x: Number(raw.x) || 0,
+    y: Number(raw.y) || 0,
+    width: Math.max(1, Number(raw.width) || 1),
+    height: Math.max(1, Number(raw.height) || 1),
+    name: raw.name || '',
+    location: raw.location || '',
+    section: raw.section || '',
+    zone: raw.zone || '',
+    notes: raw.notes || '',
+    color: raw.color || '#9bb7ff',
+    locked: Boolean(raw.locked)
+  };
+}
+
+function pushHistory() {
+  undoStack.push(deepCloneBins(bins));
+  if (undoStack.length > 100) undoStack.shift();
+  redoStack.length = 0;
+}
+
+function applyState(nextBins) {
+  bins = nextBins.map(normalizeBin);
+  if (selectedId && !bins.some((item) => item.id === selectedId)) {
+    selectedId = null;
+  }
+  showForm(bins.find((item) => item.id === selectedId) || null);
+  drawScene();
+  persistIfEnabled();
+}
+
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push(deepCloneBins(bins));
+  const previous = undoStack.pop();
+  applyState(previous);
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(deepCloneBins(bins));
+  const next = redoStack.pop();
+  applyState(next);
+}
 
 function toImperial(value) {
   const totalInches = Math.max(0, Math.round(value / PIXELS_PER_INCH));
@@ -65,25 +139,64 @@ function pointerPosition(event) {
   };
 }
 
+function snap(value) {
+  if (!options.snapToGrid) return value;
+  return Math.round(value / options.gridSize) * options.gridSize;
+}
+
+function drawGrid() {
+  if (!options.showGrid) return;
+
+  ctx.save();
+  ctx.strokeStyle = '#e3e9fb';
+  ctx.lineWidth = 1;
+
+  for (let x = 0; x <= canvas.width; x += options.gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+
+  for (let y = 0; y <= canvas.height; y += options.gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 function drawScene() {
+  document.body.classList.toggle('hide-grid', !options.showGrid);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid();
 
   bins.forEach((bin) => {
     const selected = bin.id === selectedId;
-    ctx.fillStyle = selected ? '#5f8dff' : '#9bb7ff';
+    ctx.fillStyle = bin.color || '#9bb7ff';
     ctx.strokeStyle = selected ? '#1f4ecf' : '#4a6ad3';
     ctx.lineWidth = selected ? 4 : 2;
     ctx.fillRect(bin.x, bin.y, bin.width, bin.height);
     ctx.strokeRect(bin.x, bin.y, bin.width, bin.height);
 
-    ctx.fillStyle = '#0f1f43';
-    ctx.font = '24px -apple-system, sans-serif';
-    const title = bin.name?.trim() || 'Bin sans nom';
-    ctx.fillText(title, bin.x + 10, bin.y + 30);
+    if (bin.locked) {
+      ctx.fillStyle = '#0f1f43';
+      ctx.font = '20px -apple-system, sans-serif';
+      ctx.fillText('🔒', bin.x + bin.width - 26, bin.y + 24);
+    }
 
-    ctx.fillStyle = '#233f8a';
-    ctx.font = '18px -apple-system, sans-serif';
-    ctx.fillText(`Zone: ${bin.zone || 'N/A'}`, bin.x + 10, bin.y + 56);
+    if (options.showLabels) {
+      ctx.fillStyle = '#0f1f43';
+      ctx.font = '24px -apple-system, sans-serif';
+      const title = bin.name?.trim() || 'Bin sans nom';
+      ctx.fillText(title, bin.x + 10, bin.y + 30);
+
+      ctx.fillStyle = '#233f8a';
+      ctx.font = '18px -apple-system, sans-serif';
+      ctx.fillText(`Zone: ${bin.zone || 'N/A'}`, bin.x + 10, bin.y + 56);
+    }
   });
 }
 
@@ -117,6 +230,8 @@ function showForm(bin) {
   fields.section.value = bin.section || '';
   fields.zone.value = bin.zone || '';
   fields.notes.value = bin.notes || '';
+  fields.color.value = bin.color || '#9bb7ff';
+  fields.locked.checked = Boolean(bin.locked);
 }
 
 function selectBin(bin) {
@@ -149,23 +264,53 @@ function setTooltipPosition(x, y) {
   measureTooltip.style.transform = 'none';
 }
 
+function persistIfEnabled() {
+  if (!options.autoSave) return;
+  const payload = { bins, options };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+function restoreFromStorage() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return;
+    const parsed = JSON.parse(saved);
+    bins = Array.isArray(parsed.bins) ? parsed.bins.map(normalizeBin) : [];
+    options = {
+      ...options,
+      ...(parsed.options || {})
+    };
+  } catch (_) {
+    bins = [];
+  }
+}
+
+function syncOptionsUI() {
+  snapToggle.checked = options.snapToGrid;
+  gridToggle.checked = options.showGrid;
+  labelsToggle.checked = options.showLabels;
+  autosaveToggle.checked = options.autoSave;
+  gridSizeInput.value = String(options.gridSize);
+}
+
 canvas.addEventListener('pointerdown', (event) => {
   canvas.setPointerCapture(event.pointerId);
   const pos = pointerPosition(event);
 
   if (mode === 'draw') {
-    startPoint = pos;
+    startPoint = { x: snap(pos.x), y: snap(pos.y) };
     return;
   }
 
   const hit = hitTest(pos.x, pos.y);
   selectBin(hit);
 
-  if (hit) {
+  if (hit && !hit.locked) {
     dragOffset = {
       x: pos.x - hit.x,
       y: pos.y - hit.y
     };
+    pushHistory();
   }
 });
 
@@ -174,8 +319,10 @@ canvas.addEventListener('pointermove', (event) => {
 
   if (mode === 'draw' && startPoint) {
     drawScene();
-    const width = pos.x - startPoint.x;
-    const height = pos.y - startPoint.y;
+    const currentX = snap(pos.x);
+    const currentY = snap(pos.y);
+    const width = currentX - startPoint.x;
+    const height = currentY - startPoint.y;
 
     ctx.setLineDash([8, 6]);
     ctx.strokeStyle = '#244bc5';
@@ -189,10 +336,10 @@ canvas.addEventListener('pointermove', (event) => {
 
   if (mode === 'select' && dragOffset && selectedId) {
     const current = bins.find((item) => item.id === selectedId);
-    if (!current) return;
+    if (!current || current.locked) return;
 
-    current.x = clamp(pos.x - dragOffset.x, 0, canvas.width - current.width);
-    current.y = clamp(pos.y - dragOffset.y, 0, canvas.height - current.height);
+    current.x = clamp(snap(pos.x - dragOffset.x), 0, canvas.width - current.width);
+    current.y = clamp(snap(pos.y - dragOffset.y), 0, canvas.height - current.height);
     updateMeasureTooltip(current.width, current.height);
     drawScene();
   }
@@ -202,26 +349,27 @@ canvas.addEventListener('pointerup', (event) => {
   const pos = pointerPosition(event);
 
   if (mode === 'draw' && startPoint) {
-    const x = Math.min(startPoint.x, pos.x);
-    const y = Math.min(startPoint.y, pos.y);
-    const width = Math.abs(pos.x - startPoint.x);
-    const height = Math.abs(pos.y - startPoint.y);
+    const endX = snap(pos.x);
+    const endY = snap(pos.y);
+
+    const x = Math.min(startPoint.x, endX);
+    const y = Math.min(startPoint.y, endY);
+    const width = Math.abs(endX - startPoint.x);
+    const height = Math.abs(endY - startPoint.y);
 
     if (width > 20 && height > 20) {
-      const bin = {
+      pushHistory();
+      const bin = normalizeBin({
         id: crypto.randomUUID(),
         x,
         y,
         width,
         height,
-        name: '',
-        location: '',
-        section: '',
-        zone: '',
-        notes: ''
-      };
+        color: '#9bb7ff'
+      });
       bins.push(bin);
       selectBin(bin);
+      persistIfEnabled();
     } else {
       updateMeasureTooltip();
     }
@@ -239,33 +387,61 @@ form.addEventListener('submit', (event) => {
   const current = bins.find((item) => item.id === selectedId);
   if (!current) return;
 
+  pushHistory();
   current.name = fields.name.value;
   current.location = fields.location.value;
   current.section = fields.section.value;
   current.zone = fields.zone.value;
   current.notes = fields.notes.value;
+  current.color = fields.color.value;
+  current.locked = fields.locked.checked;
 
   drawScene();
+  persistIfEnabled();
 });
 
 drawButton.addEventListener('click', () => setMode('draw'));
 selectButton.addEventListener('click', () => setMode('select'));
 
+duplicateButton.addEventListener('click', () => {
+  const current = bins.find((item) => item.id === selectedId);
+  if (!current) return;
+  pushHistory();
+  const clone = normalizeBin({
+    ...current,
+    id: crypto.randomUUID(),
+    x: clamp(current.x + options.gridSize, 0, canvas.width - current.width),
+    y: clamp(current.y + options.gridSize, 0, canvas.height - current.height),
+    name: current.name ? `${current.name} (copie)` : ''
+  });
+  bins.push(clone);
+  selectBin(clone);
+  persistIfEnabled();
+});
+
 deleteButton.addEventListener('click', () => {
   if (!selectedId) return;
+  pushHistory();
   bins = bins.filter((bin) => bin.id !== selectedId);
   selectBin(null);
   drawScene();
+  persistIfEnabled();
 });
 
 clearButton.addEventListener('click', () => {
+  if (!bins.length) return;
+  pushHistory();
   bins = [];
   selectBin(null);
   drawScene();
+  persistIfEnabled();
 });
 
+undoButton.addEventListener('click', undo);
+redoButton.addEventListener('click', redo);
+
 saveButton.addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify({ bins }, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify({ bins, options }, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
@@ -280,11 +456,23 @@ fileInput.addEventListener('change', async () => {
   const file = fileInput.files?.[0];
   if (!file) return;
 
-  const text = await file.text();
-  const data = JSON.parse(text);
-  bins = Array.isArray(data.bins) ? data.bins : [];
-  selectBin(null);
-  drawScene();
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    pushHistory();
+    bins = Array.isArray(data.bins) ? data.bins.map(normalizeBin) : [];
+    options = {
+      ...options,
+      ...(data.options || {})
+    };
+    syncOptionsUI();
+    selectBin(null);
+    drawScene();
+    persistIfEnabled();
+  } catch (_) {
+    alert('Fichier JSON invalide.');
+  }
+
   fileInput.value = '';
 });
 
@@ -294,6 +482,60 @@ exportButton.addEventListener('click', () => {
   anchor.href = url;
   anchor.download = 'warehouse-plan.png';
   anchor.click();
+});
+
+snapToggle.addEventListener('change', () => {
+  options.snapToGrid = snapToggle.checked;
+  persistIfEnabled();
+});
+
+gridToggle.addEventListener('change', () => {
+  options.showGrid = gridToggle.checked;
+  drawScene();
+  persistIfEnabled();
+});
+
+labelsToggle.addEventListener('change', () => {
+  options.showLabels = labelsToggle.checked;
+  drawScene();
+  persistIfEnabled();
+});
+
+autosaveToggle.addEventListener('change', () => {
+  options.autoSave = autosaveToggle.checked;
+  if (options.autoSave) persistIfEnabled();
+});
+
+gridSizeInput.addEventListener('change', () => {
+  const next = clamp(Number(gridSizeInput.value) || 45, 10, 120);
+  options.gridSize = next;
+  gridSizeInput.value = String(next);
+  drawScene();
+  persistIfEnabled();
+});
+
+window.addEventListener('keydown', (event) => {
+  const inInput = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '');
+  if (inInput) return;
+
+  if (event.key === 'Delete' || event.key === 'Backspace') {
+    deleteButton.click();
+  }
+
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+    event.preventDefault();
+    undo();
+  }
+
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+    event.preventDefault();
+    redo();
+  }
+
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd') {
+    event.preventDefault();
+    duplicateButton.click();
+  }
 });
 
 measureHandle.addEventListener('pointerdown', (event) => {
@@ -328,5 +570,7 @@ window.addEventListener('resize', () => {
   setTooltipPosition(rect.left, rect.top);
 });
 
+restoreFromStorage();
+syncOptionsUI();
 updateMeasureTooltip();
 drawScene();

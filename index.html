@@ -16,8 +16,32 @@
       <section class="toolbar">
         <button id="draw-mode" class="active">Tracer bin</button>
         <button id="select-mode">Sélectionner</button>
+        <button id="duplicate-bin">Dupliquer</button>
         <button id="delete-bin">Supprimer</button>
         <button id="clear-all">Tout effacer</button>
+      </section>
+
+      <section class="toolbar options" aria-label="Options d'amélioration">
+        <label class="toggle">
+          <input type="checkbox" id="snap-toggle" checked />
+          <span>Snap à la grille</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="grid-toggle" checked />
+          <span>Afficher grille</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="labels-toggle" checked />
+          <span>Afficher labels</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="autosave-toggle" checked />
+          <span>Auto-save local</span>
+        </label>
+        <label class="inline-field">
+          Taille grille
+          <input type="number" id="grid-size" min="10" max="120" step="5" value="45" />
+        </label>
       </section>
 
       <section class="board-wrap">
@@ -50,6 +74,16 @@
           </label>
 
           <label>
+            Couleur du bin
+            <input type="color" id="bin-color" value="#9bb7ff" />
+          </label>
+
+          <label class="toggle compact">
+            <input type="checkbox" id="bin-locked" />
+            <span>Verrouiller le bin (non déplaçable)</span>
+          </label>
+
+          <label>
             Notes
             <textarea id="bin-notes" rows="3" placeholder="Infos supplémentaires..."></textarea>
           </label>
@@ -59,6 +93,8 @@
       </section>
 
       <section class="toolbar secondary">
+        <button id="undo-action">Annuler</button>
+        <button id="redo-action">Rétablir</button>
         <button id="save-plan">Sauvegarder JSON</button>
         <button id="load-plan">Charger JSON</button>
         <button id="export-image">Exporter PNG</button>
