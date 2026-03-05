@@ -69,6 +69,8 @@ const fields = {
 };
 
 const PIXELS_PER_INCH = 4;
+const GRID_CELL_INCHES = 50;
+const GRID_CELL_PIXELS = GRID_CELL_INCHES * PIXELS_PER_INCH;
 const STORAGE_KEY = 'dessin-warehouse-plan-v2';
 const ADVANCED_OPTIONS_KEY = 'dessin-advanced-options-v1';
 const VIEW3D_CONTEXT_KEY = 'dessin-view3d-context-v1';
@@ -96,7 +98,7 @@ let options = {
   showGrid: true,
   showLabels: true,
   autoSave: true,
-  gridSize: 45,
+  gridSize: GRID_CELL_PIXELS,
   zoom: 1,
   dimensionUnit: 'ft-in',
   overlayOpacity: 40,
@@ -711,6 +713,10 @@ function persistIfEnabled() {
   persist3dContext();
 }
 
+function enforceGridScale() {
+  options.gridSize = GRID_CELL_PIXELS;
+}
+
 function restoreFromStorage() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -725,6 +731,7 @@ function restoreFromStorage() {
     if (!['ft-in', 'in'].includes(options.dimensionUnit)) options.dimensionUnit = 'ft-in';
     options.overlayOpacity = clamp(Number(options.overlayOpacity) || 40, 5, 100);
     options.showOverlay = options.showOverlay !== false;
+    enforceGridScale();
   } catch (_) {
     bins = [];
   }
@@ -747,6 +754,9 @@ function syncOptionsUI() {
   labelsToggle.checked = options.showLabels;
   autosaveToggle.checked = options.autoSave;
   gridSizeInput.value = String(options.gridSize);
+  gridSizeInput.disabled = true;
+  gridSizeMinusButton.disabled = true;
+  gridSizePlusButton.disabled = true;
   zoomLevelInput.value = String(Math.round((options.zoom || 1) * 100));
   overlayOpacityInput.value = String(clamp(Number(options.overlayOpacity) || 40, 5, 100));
   overlayToggle.checked = options.showOverlay !== false;
@@ -767,10 +777,9 @@ function applyZoom() {
   canvas.style.width = `${scale * 100}%`;
 }
 
-function adjustGridSize(delta) {
-  const next = clamp((Number(gridSizeInput.value) || options.gridSize) + delta, 10, 120);
-  options.gridSize = next;
-  gridSizeInput.value = String(next);
+function adjustGridSize() {
+  options.gridSize = GRID_CELL_PIXELS;
+  gridSizeInput.value = String(options.gridSize);
   drawScene();
   persistIfEnabled();
 }
@@ -1006,6 +1015,7 @@ fileInput.addEventListener('change', async () => {
     if (!['ft-in', 'in'].includes(options.dimensionUnit)) options.dimensionUnit = 'ft-in';
     options.overlayOpacity = clamp(Number(options.overlayOpacity) || 40, 5, 100);
     options.showOverlay = data.options?.showOverlay !== false;
+    enforceGridScale();
     syncOptionsUI();
     selectBin(null);
     drawScene();
@@ -1082,16 +1092,10 @@ autosaveToggle.addEventListener('change', () => {
   if (options.autoSave) persistIfEnabled();
 });
 
-gridSizeInput.addEventListener('change', () => {
-  const next = clamp(Number(gridSizeInput.value) || 45, 10, 120);
-  options.gridSize = next;
-  gridSizeInput.value = String(next);
-  drawScene();
-  persistIfEnabled();
-});
+gridSizeInput.addEventListener('change', adjustGridSize);
 
-gridSizeMinusButton.addEventListener('click', () => adjustGridSize(-5));
-gridSizePlusButton.addEventListener('click', () => adjustGridSize(5));
+gridSizeMinusButton.addEventListener('click', adjustGridSize);
+gridSizePlusButton.addEventListener('click', adjustGridSize);
 
 zoomLevelInput.addEventListener('change', () => {
   const next = clamp(Number(zoomLevelInput.value) || 100, 50, 200);
@@ -1256,6 +1260,7 @@ function restoreAdvancedOptions() {
 
 restoreAdvancedOptions();
 restoreFromStorage();
+enforceGridScale();
 syncOptionsUI();
 applyZoom();
 updateMeasureTooltip();
