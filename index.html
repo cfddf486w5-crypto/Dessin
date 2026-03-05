@@ -13,36 +13,54 @@
     </header>
 
     <main>
-      <section class="toolbar">
-        <button id="draw-mode" class="active">Tracer bin</button>
-        <button id="select-mode">Sélectionner</button>
-        <button id="duplicate-bin">Dupliquer</button>
-        <button id="delete-bin">Supprimer</button>
-        <button id="clear-all">Tout effacer</button>
-      </section>
+      <details class="toolbar-group" open>
+        <summary>Outils de dessin</summary>
+        <section class="toolbar">
+          <button id="draw-mode" class="active">Tracer bin</button>
+          <button id="select-mode">Sélectionner</button>
+          <button id="duplicate-bin">Dupliquer</button>
+          <button id="delete-bin">Supprimer</button>
+          <button id="clear-all">Tout effacer</button>
+        </section>
+      </details>
 
-      <section class="toolbar options" aria-label="Options d'amélioration">
-        <label class="toggle">
-          <input type="checkbox" id="snap-toggle" checked />
-          <span>Snap à la grille</span>
-        </label>
-        <label class="toggle">
-          <input type="checkbox" id="grid-toggle" checked />
-          <span>Afficher grille</span>
-        </label>
-        <label class="toggle">
-          <input type="checkbox" id="labels-toggle" checked />
-          <span>Afficher labels</span>
-        </label>
-        <label class="toggle">
-          <input type="checkbox" id="autosave-toggle" checked />
-          <span>Auto-save local</span>
-        </label>
-        <label class="inline-field">
-          Taille grille
-          <input type="number" id="grid-size" min="10" max="120" step="5" value="45" />
-        </label>
-      </section>
+      <details class="toolbar-group" open>
+        <summary>Options du plan</summary>
+        <section class="toolbar options" aria-label="Options d'amélioration">
+          <label class="toggle">
+            <input type="checkbox" id="snap-toggle" checked />
+            <span>Snap à la grille</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="grid-toggle" checked />
+            <span>Afficher grille</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="labels-toggle" checked />
+            <span>Afficher labels</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="autosave-toggle" checked />
+            <span>Auto-save local</span>
+          </label>
+          <label class="inline-field">
+            Taille cellule
+            <div class="stepper-field">
+              <button type="button" id="grid-size-minus" class="mini-btn" aria-label="Diminuer la taille de cellule">−</button>
+              <input type="number" id="grid-size" min="10" max="120" step="5" value="45" />
+              <button type="button" id="grid-size-plus" class="mini-btn" aria-label="Augmenter la taille de cellule">+</button>
+            </div>
+          </label>
+          <label class="inline-field">
+            Zoom
+            <div class="stepper-field">
+              <button type="button" id="zoom-minus" class="mini-btn" aria-label="Zoom arrière">−</button>
+              <input type="number" id="zoom-level" min="50" max="200" step="10" value="100" />
+              <button type="button" id="zoom-plus" class="mini-btn" aria-label="Zoom avant">+</button>
+            </div>
+          </label>
+        </section>
+      </details>
 
       <section class="board-wrap">
         <canvas id="warehouse-canvas" width="900" height="1300"></canvas>
@@ -74,6 +92,15 @@
           </label>
 
           <label>
+            Type d'encadré
+            <select id="bin-type">
+              <option value="zone">Zone (très pâle)</option>
+              <option value="section">Section (moyen)</option>
+              <option value="bin">Bin (plus foncé)</option>
+            </select>
+          </label>
+
+          <label>
             Couleur du bin
             <input type="color" id="bin-color" value="#9bb7ff" />
           </label>
@@ -92,14 +119,17 @@
         </form>
       </section>
 
-      <section class="toolbar secondary">
-        <button id="undo-action">Annuler</button>
-        <button id="redo-action">Rétablir</button>
-        <button id="save-plan">Sauvegarder JSON</button>
-        <button id="load-plan">Charger JSON</button>
-        <button id="export-image">Exporter PNG</button>
-        <input type="file" id="file-input" accept="application/json" hidden />
-      </section>
+      <details class="toolbar-group">
+        <summary>Sauvegarde & historique</summary>
+        <section class="toolbar secondary">
+          <button id="undo-action">Annuler</button>
+          <button id="redo-action">Rétablir</button>
+          <button id="save-plan">Sauvegarder JSON</button>
+          <button id="load-plan">Charger JSON</button>
+          <button id="export-image">Exporter PNG</button>
+          <input type="file" id="file-input" accept="application/json" hidden />
+        </section>
+      </details>
     </main>
 
     <aside id="measure-tooltip" aria-live="polite">
@@ -111,10 +141,18 @@
         <p>
           <span>Longueur</span>
           <strong id="measure-length">--</strong>
+          <span class="stepper-inline">
+            <button id="length-minus" type="button" class="mini-btn">−</button>
+            <button id="length-plus" type="button" class="mini-btn">+</button>
+          </span>
         </p>
         <p>
           <span>Largeur</span>
           <strong id="measure-width">--</strong>
+          <span class="stepper-inline">
+            <button id="width-minus" type="button" class="mini-btn">−</button>
+            <button id="width-plus" type="button" class="mini-btn">+</button>
+          </span>
         </p>
       </div>
     </aside>
