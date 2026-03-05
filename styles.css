@@ -258,6 +258,28 @@ textarea {
   cursor: grabbing;
 }
 
+.bar-height-popup {
+  position: fixed;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 92%);
+  border: 1px solid rgb(66 104 196 / 24%);
+  box-shadow: 0 8px 20px rgb(18 41 95 / 18%);
+  z-index: 30;
+}
+
+.bar-height-popup .confirm-btn {
+  width: 30px;
+}
+
+body.theme-night .bar-height-popup {
+  background: rgb(20 31 56 / 95%);
+  border-color: rgb(124 168 255 / 30%);
+}
+
 .tooltip-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
