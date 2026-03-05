@@ -14,7 +14,7 @@ struct WarehouseCanvasView: View {
 
     var body: some View {
         GeometryReader { geo in
-            ZStack {
+            ZStack(alignment: .topLeading) {
                 gridBackground(size: geo.size)
 
                 ForEach(racks) { rack in
@@ -35,7 +35,7 @@ struct WarehouseCanvasView: View {
                 }
             }
             .contentShape(Rectangle())
-            .scaleEffect(canvasScale)
+            .scaleEffect(canvasScale, anchor: .topLeading)
             .gesture(drawRackGesture)
             .simultaneousGesture(zoomGesture)
             .background(Color(white: 0.95))
@@ -44,16 +44,16 @@ struct WarehouseCanvasView: View {
     }
 
     private func gridBackground(size: CGSize) -> some View {
-        Canvas { context, _ in
+        Canvas { context, size in
             let step: CGFloat = 40
             let path = Path { p in
-                stride(from: 0 as CGFloat, through: 4000, by: step).forEach { x in
+                stride(from: 0 as CGFloat, through: size.width, by: step).forEach { x in
                     p.move(to: CGPoint(x: x, y: 0))
-                    p.addLine(to: CGPoint(x: x, y: 4000))
+                    p.addLine(to: CGPoint(x: x, y: size.height))
                 }
-                stride(from: 0 as CGFloat, through: 4000, by: step).forEach { y in
+                stride(from: 0 as CGFloat, through: size.height, by: step).forEach { y in
                     p.move(to: CGPoint(x: 0, y: y))
-                    p.addLine(to: CGPoint(x: 4000, y: y))
+                    p.addLine(to: CGPoint(x: size.width, y: y))
                 }
             }
             context.stroke(path, with: .color(Color.gray.opacity(0.2)), lineWidth: 1)
