@@ -10,6 +10,11 @@ const loadButton = document.getElementById('load-plan');
 const exportButton = document.getElementById('export-image');
 const fileInput = document.getElementById('file-input');
 
+const measureTooltip = document.getElementById('measure-tooltip');
+const measureHandle = measureTooltip.querySelector('.tooltip-handle');
+const lengthLabel = document.getElementById('measure-length');
+const widthLabel = document.getElementById('measure-width');
+
 const form = document.getElementById('bin-form');
 const emptyState = document.getElementById('empty-state');
 const fields = {
@@ -20,13 +25,34 @@ const fields = {
   notes: document.getElementById('bin-notes')
 };
 
+const PIXELS_PER_INCH = 4;
+
 let mode = 'draw';
 let bins = [];
 let selectedId = null;
 let startPoint = null;
 let dragOffset = null;
+let tooltipDrag = null;
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+function toImperial(value) {
+  const totalInches = Math.max(0, Math.round(value / PIXELS_PER_INCH));
+  const feet = Math.floor(totalInches / 12);
+  const inches = totalInches % 12;
+  return `${feet}' ${inches}"`;
+}
+
+function updateMeasureTooltip(width, height) {
+  if (typeof width !== 'number' || typeof height !== 'number') {
+    lengthLabel.textContent = '--';
+    widthLabel.textContent = '--';
+    return;
+  }
+
+  lengthLabel.textContent = toImperial(Math.max(width, height));
+  widthLabel.textContent = toImperial(Math.min(width, height));
+}
 
 function pointerPosition(event) {
   const rect = canvas.getBoundingClientRect();
@@ -96,7 +122,31 @@ function showForm(bin) {
 function selectBin(bin) {
   selectedId = bin ? bin.id : null;
   showForm(bin);
+
+  if (bin) {
+    updateMeasureTooltip(bin.width, bin.height);
+  } else {
+    updateMeasureTooltip();
+  }
+
   drawScene();
+}
+
+function clampTooltipPosition(x, y) {
+  const maxX = window.innerWidth - measureTooltip.offsetWidth - 8;
+  const maxY = window.innerHeight - measureTooltip.offsetHeight - 8;
+  return {
+    x: clamp(x, 8, maxX),
+    y: clamp(y, 8, maxY)
+  };
+}
+
+function setTooltipPosition(x, y) {
+  const pos = clampTooltipPosition(x, y);
+  measureTooltip.style.left = `${pos.x}px`;
+  measureTooltip.style.top = `${pos.y}px`;
+  measureTooltip.style.bottom = 'auto';
+  measureTooltip.style.transform = 'none';
 }
 
 canvas.addEventListener('pointerdown', (event) => {
@@ -132,6 +182,8 @@ canvas.addEventListener('pointermove', (event) => {
     ctx.lineWidth = 3;
     ctx.strokeRect(startPoint.x, startPoint.y, width, height);
     ctx.setLineDash([]);
+
+    updateMeasureTooltip(Math.abs(width), Math.abs(height));
     return;
   }
 
@@ -141,6 +193,7 @@ canvas.addEventListener('pointermove', (event) => {
 
     current.x = clamp(pos.x - dragOffset.x, 0, canvas.width - current.width);
     current.y = clamp(pos.y - dragOffset.y, 0, canvas.height - current.height);
+    updateMeasureTooltip(current.width, current.height);
     drawScene();
   }
 });
@@ -169,6 +222,8 @@ canvas.addEventListener('pointerup', (event) => {
       };
       bins.push(bin);
       selectBin(bin);
+    } else {
+      updateMeasureTooltip();
     }
 
     startPoint = null;
@@ -241,4 +296,37 @@ exportButton.addEventListener('click', () => {
   anchor.click();
 });
 
+measureHandle.addEventListener('pointerdown', (event) => {
+  measureTooltip.setPointerCapture(event.pointerId);
+  const rect = measureTooltip.getBoundingClientRect();
+  tooltipDrag = {
+    pointerId: event.pointerId,
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
+  };
+  measureTooltip.classList.add('dragging');
+});
+
+measureHandle.addEventListener('pointermove', (event) => {
+  if (!tooltipDrag || tooltipDrag.pointerId !== event.pointerId) {
+    return;
+  }
+
+  setTooltipPosition(event.clientX - tooltipDrag.x, event.clientY - tooltipDrag.y);
+});
+
+measureHandle.addEventListener('pointerup', (event) => {
+  if (tooltipDrag?.pointerId === event.pointerId) {
+    measureTooltip.releasePointerCapture(event.pointerId);
+    tooltipDrag = null;
+    measureTooltip.classList.remove('dragging');
+  }
+});
+
+window.addEventListener('resize', () => {
+  const rect = measureTooltip.getBoundingClientRect();
+  setTooltipPosition(rect.left, rect.top);
+});
+
+updateMeasureTooltip();
 drawScene();
