@@ -18,6 +18,7 @@ body {
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   padding: env(safe-area-inset-top) 14px env(safe-area-inset-bottom);
+  min-height: 100vh;
 }
 
 header {
@@ -133,4 +134,57 @@ textarea {
   background: var(--primary);
   color: white;
   font-weight: 700;
+}
+
+#measure-tooltip {
+  position: fixed;
+  left: 50%;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  min-width: 220px;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 88%);
+  border: 1px solid rgb(255 255 255 / 90%);
+  box-shadow: 0 10px 30px rgb(18 41 95 / 22%);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  z-index: 20;
+  touch-action: none;
+}
+
+.tooltip-handle {
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #3557ad;
+  background: linear-gradient(90deg, #dce8ff, #edf3ff);
+  cursor: grab;
+}
+
+#measure-tooltip.dragging .tooltip-handle {
+  cursor: grabbing;
+}
+
+.tooltip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+}
+
+.tooltip-grid p {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.tooltip-grid span {
+  font-size: 0.8rem;
+  color: #5f709f;
+}
+
+.tooltip-grid strong {
+  font-size: 1rem;
 }
