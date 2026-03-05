@@ -34,6 +34,8 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   padding: env(safe-area-inset-top) 14px env(safe-area-inset-bottom);
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   background-image: radial-gradient(circle at top, #ffffff 0%, #eef2ff 40%, #edf2ff 100%);
 }
 
@@ -54,6 +56,7 @@ header p {
 main {
   display: grid;
   gap: 12px;
+  flex: 1;
 }
 
 .toolbar {
@@ -478,6 +481,7 @@ select {
 .rack3d-main {
   display: grid;
   gap: 12px;
+  flex: 1;
 }
 
 .rack3d-form-grid {
@@ -677,4 +681,58 @@ td {
   font-weight: 800;
   color: #264494;
   z-index: 5;
+}
+
+
+.brand-footer {
+  display: flex;
+  justify-content: center;
+  padding: 14px 6px calc(14px + env(safe-area-inset-bottom));
+}
+
+.brand-badge {
+  min-width: min(100%, 300px);
+  text-align: center;
+  border-radius: 14px;
+  padding: 10px 16px;
+  border: 1px solid #cad8fb;
+  background: linear-gradient(145deg, #ffffff, #dfe9ff);
+  box-shadow:
+    0 12px 28px rgb(38 74 157 / 18%),
+    inset 0 2px 0 rgb(255 255 255 / 90%),
+    inset 0 -3px 8px rgb(127 160 231 / 35%);
+  transform: translateZ(0);
+}
+
+.brand-name {
+  display: block;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #183d94;
+  text-transform: uppercase;
+}
+
+.brand-copy {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #4962a1;
+}
+
+body.theme-night .brand-badge {
+  border-color: #4464a7;
+  background: linear-gradient(145deg, #1a2a4b, #12203d);
+  box-shadow:
+    0 14px 28px rgb(0 0 0 / 45%),
+    inset 0 1px 0 rgb(151 181 255 / 30%),
+    inset 0 -4px 9px rgb(15 24 45 / 75%);
+}
+
+body.theme-night .brand-name {
+  color: #c9daff;
+}
+
+body.theme-night .brand-copy {
+  color: #9ab4ed;
 }
