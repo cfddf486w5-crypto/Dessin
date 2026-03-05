@@ -9,7 +9,9 @@ Cette version Web fonctionne sur iPhone (Safari) et permet de :
 - renseigner les données d'un bin (nom, location, section, zone, notes),
 - supprimer un bin ou effacer tout le plan,
 - sauvegarder/charger le plan en JSON,
-- exporter le plan en PNG.
+- exporter le plan en PNG,
+- activer des options avancées (snap grille, affichage grille/labels, auto-save local),
+- annuler/rétablir des actions, dupliquer un bin, gérer couleur + verrouillage d'un bin.
 
 ### Lancer localement
 ```bash
