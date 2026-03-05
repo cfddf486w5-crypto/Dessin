@@ -28,6 +28,7 @@
           <button id="draw-mode" class="active">Tracer bin</button>
           <button id="select-mode">Sélectionner</button>
           <button id="load-reference-map">Charger map modèle</button>
+          <button id="import-reference-image">Importer image de calque</button>
           <button id="duplicate-bin">Dupliquer</button>
           <button id="delete-bin">Supprimer</button>
           <button id="clear-all">Tout effacer</button>
@@ -69,6 +70,19 @@
               <button type="button" id="zoom-plus" class="mini-btn" aria-label="Zoom avant">+</button>
             </div>
           </label>
+          <label class="inline-field">
+            Opacité calque
+            <div class="stepper-field">
+              <button type="button" id="overlay-opacity-minus" class="mini-btn" aria-label="Réduire l'opacité du calque">−</button>
+              <input type="number" id="overlay-opacity" min="5" max="100" step="5" value="40" />
+              <button type="button" id="overlay-opacity-plus" class="mini-btn" aria-label="Augmenter l'opacité du calque">+</button>
+            </div>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="overlay-toggle" checked />
+            <span>Afficher le calque image</span>
+          </label>
+          <button type="button" id="clear-reference-image">Retirer image calque</button>
         </section>
       </details>
 
@@ -171,6 +185,7 @@
           <button id="load-plan">Charger JSON</button>
           <button id="export-image">Exporter PNG</button>
           <input type="file" id="file-input" accept="application/json" hidden />
+          <input type="file" id="reference-image-input" accept="image/*" hidden />
         </section>
       </details>
     </main>
