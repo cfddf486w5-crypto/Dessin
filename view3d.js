@@ -6,6 +6,40 @@ const beamHeightsInput = document.getElementById('beam-heights');
 const renderButton = document.getElementById('render-rack');
 const scene = document.getElementById('rack-scene');
 const tableBody = document.getElementById('alveole-table-body');
+const focusLabel = document.getElementById('focus-zone-label');
+
+const PIXELS_PER_INCH = 4;
+const STORAGE_KEY = 'dessin-warehouse-plan-v2';
+const VIEW3D_CONTEXT_KEY = 'dessin-view3d-context-v1';
+
+const state = {
+  unit: 'ft-in',
+  levelConfigs: []
+};
+
+function inchesToMeters(inches) {
+  return inches * 0.0254;
+}
+
+function metersToInches(meters) {
+  return meters / 0.0254;
+}
+
+
+function formatImperialFromMeters(valueMeters) {
+  const inches = Math.max(0, Math.round(metersToInches(valueMeters)));
+  if (state.unit === 'in') {
+    return `${inches}"`;
+  }
+
+  const feet = Math.floor(inches / 12);
+  const remInches = inches % 12;
+  return `${feet}' ${remInches}"`;
+}
+
+function formatDimension(valueMeters) {
+  return formatImperialFromMeters(valueMeters);
+}
 
 function parseBeamHeights() {
   return beamHeightsInput.value
@@ -18,14 +52,49 @@ function levelLetter(index) {
   return String.fromCharCode(65 + index);
 }
 
-function formatDimension(value) {
-  return `${value.toFixed(2)} m`;
-}
-
 function createSupport(className) {
   const support = document.createElement('div');
   support.className = `rack-support ${className}`;
   return support;
+}
+
+function hydrateFromPlanSelection() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    const ctx = JSON.parse(localStorage.getItem(VIEW3D_CONTEXT_KEY) || '{}');
+    const bins = Array.isArray(saved.bins) ? saved.bins : [];
+    state.unit = ['ft-in', 'in'].includes(saved?.options?.dimensionUnit) ? saved.options.dimensionUnit : 'ft-in';
+
+    const fallbackBin = bins.find((bin) => bin.type === 'zone') || bins[0];
+    const selected = bins.find((bin) => bin.id === ctx.selectedId) || fallbackBin;
+
+    if (selected) {
+      const lengthIn = Math.max(selected.width, selected.height) / PIXELS_PER_INCH;
+      const widthIn = Math.min(selected.width, selected.height) / PIXELS_PER_INCH;
+      const lengthM = inchesToMeters(lengthIn);
+      const widthM = inchesToMeters(widthIn);
+
+      widthInput.value = Math.max(0.5, lengthM).toFixed(2);
+      depthInput.value = Math.max(0.3, widthM).toFixed(2);
+      heightInput.value = Math.max(1, (widthM * 2.8)).toFixed(2);
+      focusLabel.textContent = `Zone sélectionnée: ${selected.name || selected.zone || selected.section || selected.id}`;
+    } else {
+      focusLabel.textContent = 'Aucune zone sélectionnée sur le plan (valeurs par défaut).';
+    }
+  } catch (_) {
+    focusLabel.textContent = 'Impossible de lire la zone sélectionnée (valeurs par défaut).';
+  }
+}
+
+function ensureLevelConfigs(levelCount, sectionDefault) {
+  while (state.levelConfigs.length < levelCount) {
+    state.levelConfigs.push({ sections: sectionDefault });
+  }
+
+  state.levelConfigs = state.levelConfigs.slice(0, levelCount);
+  state.levelConfigs = state.levelConfigs.map((config) => ({
+    sections: Math.min(30, Math.max(1, Math.floor(Number(config.sections) || sectionDefault)))
+  }));
 }
 
 function renderRack() {
@@ -49,6 +118,8 @@ function renderRack() {
     beamLevels.push(Math.min(1.2, rackHeightMax));
   }
 
+  ensureLevelConfigs(beamLevels.length - 1, sectionCount);
+
   scene.innerHTML = '';
   tableBody.innerHTML = '';
 
@@ -71,9 +142,16 @@ function renderRack() {
     beam.className = 'rack-beam';
     beam.style.top = `${yPx}px`;
 
+    if (i > 0) {
+      const beamAdjuster = document.createElement('div');
+      beamAdjuster.className = 'beam-adjust';
+      beamAdjuster.innerHTML = `<button type="button" data-beam="${i - 1}" data-action="dec">−</button><button type="button" data-beam="${i - 1}" data-action="inc">+</button>`;
+      beam.appendChild(beamAdjuster);
+    }
+
     const label = document.createElement('span');
     label.className = 'beam-label';
-    label.textContent = `Niveau ${levelLetter(i)} · ${beamLevels[i].toFixed(2)} m`;
+    label.textContent = `Niveau ${levelLetter(i)} · ${formatDimension(beamLevels[i])}`;
     beam.appendChild(label);
 
     rackFrame.appendChild(beam);
@@ -86,9 +164,17 @@ function renderRack() {
     const topPx = rackHeightPx - top * pxPerMeter;
     const heightPx = alveoleHeight * pxPerMeter;
 
-    for (let section = 1; section <= sectionCount; section += 1) {
-      const sectionWidth = rackWidth / sectionCount;
+    const controls = document.createElement('div');
+    controls.className = 'level-controls';
+    controls.style.top = `${topPx + 2}px`;
+    controls.innerHTML = `<button type="button" data-level="${i}" data-action="remove">−</button><span>${levelLetter(i)}</span><button type="button" data-level="${i}" data-action="add">+</button>`;
+    rackFrame.appendChild(controls);
+
+    const levelSections = state.levelConfigs[i].sections;
+    for (let section = 1; section <= levelSections; section += 1) {
+      const sectionWidth = rackWidth / levelSections;
       const volume = sectionWidth * rackDepth * alveoleHeight;
+      const volumeFt3 = volume * 35.3147;
       const litres = volume * 1000;
       const code = `${levelLetter(i)}${String(section).padStart(2, '0')}`;
 
@@ -96,25 +182,66 @@ function renderRack() {
       cell.className = 'alveole-cell';
       cell.style.top = `${topPx}px`;
       cell.style.height = `${heightPx}px`;
-      cell.style.width = `${90 / sectionCount}%`;
-      cell.style.left = `${5 + ((section - 1) * 90) / sectionCount}%`;
-      cell.innerHTML = `<strong>${code}</strong><small>${formatDimension(alveoleHeight)} × ${formatDimension(sectionWidth)} × ${formatDimension(rackDepth)}</small>`;
+      cell.style.width = `${90 / levelSections}%`;
+      cell.style.left = `${5 + ((section - 1) * 90) / levelSections}%`;
+      cell.style.borderColor = i % 2 === 0 ? '#93aadf' : '#b4a3df';
+      cell.innerHTML = `<strong>${code}</strong><small>L ${formatDimension(sectionWidth)} · l ${formatDimension(rackDepth)} · h ${formatDimension(alveoleHeight)}</small><small>${volumeFt3.toFixed(1)} pi³ / ${litres.toFixed(0)} L</small>`;
       rackFrame.appendChild(cell);
 
       const row = document.createElement('tr');
       row.innerHTML = `
         <td>${code}</td>
-        <td>${levelLetter(i)} (${bottom.toFixed(2)}m → ${top.toFixed(2)}m)</td>
+        <td>${levelLetter(i)} (${formatDimension(bottom)} → ${formatDimension(top)})</td>
         <td>${formatDimension(alveoleHeight)} / ${formatDimension(sectionWidth)} / ${formatDimension(rackDepth)}</td>
-        <td>${volume.toFixed(3)} m³</td>
+        <td>${volumeFt3.toFixed(2)} pi³</td>
         <td>${litres.toFixed(1)} L</td>
+        <td>${alveoleHeight.toFixed(2)} / ${sectionWidth.toFixed(2)} / ${rackDepth.toFixed(2)} m</td>
       `;
       tableBody.appendChild(row);
     }
   }
 
+  const addBeam = document.createElement('button');
+  addBeam.type = 'button';
+  addBeam.className = 'add-beam-btn';
+  addBeam.textContent = '+ Ajouter une barre';
+  addBeam.addEventListener('click', () => {
+    const heights = parseBeamHeights();
+    heights.push(0.9);
+    beamHeightsInput.value = heights.map((v) => v.toFixed(2)).join(',');
+    renderRack();
+  });
+
+  scene.appendChild(addBeam);
   scene.appendChild(rackFrame);
+
+  rackFrame.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+
+    const levelIndex = Number(target.dataset.level);
+    const beamIndex = Number(target.dataset.beam);
+
+    if (Number.isInteger(levelIndex)) {
+      const cfg = state.levelConfigs[levelIndex];
+      if (!cfg) return;
+      cfg.sections += target.dataset.action === 'add' ? 1 : -1;
+      cfg.sections = Math.min(30, Math.max(1, cfg.sections));
+      renderRack();
+      return;
+    }
+
+    if (Number.isInteger(beamIndex)) {
+      const heights = parseBeamHeights();
+      if (!heights[beamIndex]) return;
+      heights[beamIndex] += target.dataset.action === 'inc' ? 0.1 : -0.1;
+      heights[beamIndex] = Math.min(2.5, Math.max(0.3, heights[beamIndex]));
+      beamHeightsInput.value = heights.map((v) => v.toFixed(2)).join(',');
+      renderRack();
+    }
+  });
 }
 
+hydrateFromPlanSelection();
 renderButton.addEventListener('click', renderRack);
 renderRack();

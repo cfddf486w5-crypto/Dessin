@@ -47,6 +47,7 @@ const binSearchInput = document.getElementById('bin-search');
 const focusMissingDataButton = document.getElementById('focus-missing-data');
 const exportCsvButton = document.getElementById('export-csv');
 const searchFeedback = document.getElementById('search-feedback');
+const view3dLink = document.querySelector('a[href="view3d.html"]');
 const fields = {
   name: document.getElementById('bin-name'),
   location: document.getElementById('bin-location'),
@@ -62,6 +63,7 @@ const fields = {
 const PIXELS_PER_INCH = 4;
 const STORAGE_KEY = 'dessin-warehouse-plan-v2';
 const ADVANCED_OPTIONS_KEY = 'dessin-advanced-options-v1';
+const VIEW3D_CONTEXT_KEY = 'dessin-view3d-context-v1';
 
 const PRESET_BIN_OPTIONS = {
   presetBinP1: { width: 50 * PIXELS_PER_INCH, height: 50 * PIXELS_PER_INCH },
@@ -427,6 +429,7 @@ function selectBin(bin) {
     updateMeasureTooltip();
   }
 
+  persist3dContext();
   drawScene();
 }
 
@@ -447,10 +450,22 @@ function setTooltipPosition(x, y) {
   measureTooltip.style.transform = 'none';
 }
 
+
+function persist3dContext() {
+  const selectedBin = bins.find((item) => item.id === selectedId) || null;
+  const fallbackZone = bins.find((item) => item.type === 'zone') || null;
+  const focusBin = selectedBin || fallbackZone;
+  localStorage.setItem(VIEW3D_CONTEXT_KEY, JSON.stringify({
+    selectedId: focusBin?.id || null,
+    savedAt: Date.now()
+  }));
+}
+
 function persistIfEnabled() {
   if (!options.autoSave) return;
   const payload = { bins, options };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  persist3dContext();
 }
 
 function restoreFromStorage() {
@@ -937,3 +952,11 @@ syncOptionsUI();
 applyZoom();
 updateMeasureTooltip();
 drawScene();
+
+
+if (view3dLink) {
+  view3dLink.addEventListener('click', () => {
+    persist3dContext();
+    persistIfEnabled();
+  });
+}
