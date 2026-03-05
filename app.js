@@ -54,12 +54,23 @@ const PIXELS_PER_INCH = 4;
 const STORAGE_KEY = 'dessin-warehouse-plan-v2';
 const ADVANCED_OPTIONS_KEY = 'dessin-advanced-options-v1';
 
+const PRESET_BIN_OPTIONS = {
+  presetBinP1: { width: 50 * PIXELS_PER_INCH, height: 50 * PIXELS_PER_INCH },
+  presetBinP2: { width: 50 * PIXELS_PER_INCH, height: 100 * PIXELS_PER_INCH },
+  presetBinP3: { width: 50 * PIXELS_PER_INCH, height: 150 * PIXELS_PER_INCH },
+  presetBinP4: { width: 50 * PIXELS_PER_INCH, height: 200 * PIXELS_PER_INCH },
+  presetBinP5: { width: 50 * PIXELS_PER_INCH, height: 250 * PIXELS_PER_INCH },
+  presetBinP6: { width: 50 * PIXELS_PER_INCH, height: 300 * PIXELS_PER_INCH },
+  presetBinP7: { width: 50 * PIXELS_PER_INCH, height: 350 * PIXELS_PER_INCH }
+};
+
 let mode = 'draw';
 let bins = [];
 let selectedId = null;
 let startPoint = null;
 let dragOffset = null;
 let tooltipDrag = null;
+let activePresetBin = null;
 
 let options = {
   snapToGrid: true,
@@ -492,14 +503,19 @@ canvas.addEventListener('pointerup', (event) => {
     const width = Math.abs(endX - startPoint.x);
     const height = Math.abs(endY - startPoint.y);
 
-    if (width > 20 && height > 20) {
+    const shouldCreateCustom = width > 20 && height > 20;
+    const shouldCreatePreset = Boolean(activePresetBin);
+
+    if (shouldCreateCustom || shouldCreatePreset) {
       pushHistory();
+      const binWidth = shouldCreatePreset ? activePresetBin.width : width;
+      const binHeight = shouldCreatePreset ? activePresetBin.height : height;
       const bin = normalizeBin({
         id: crypto.randomUUID(),
-        x,
-        y,
-        width,
-        height,
+        x: clamp(x, 0, canvas.width - binWidth),
+        y: clamp(y, 0, canvas.height - binHeight),
+        width: binWidth,
+        height: binHeight,
         color: '#9bb7ff'
       });
       bins.push(bin);
@@ -762,6 +778,14 @@ window.addEventListener('resize', () => {
   setTooltipPosition(rect.left, rect.top);
 });
 
+
+function getActivePresetBin(layout = {}) {
+  for (const [key, size] of Object.entries(PRESET_BIN_OPTIONS)) {
+    if (layout?.[key] === true) return size;
+  }
+  return null;
+}
+
 function restoreAdvancedOptions() {
   try {
     const saved = localStorage.getItem(ADVANCED_OPTIONS_KEY);
@@ -790,6 +814,8 @@ function restoreAdvancedOptions() {
       canvas.width = 2200;
       canvas.height = 2200;
     }
+
+    activePresetBin = getActivePresetBin(parsed.layout);
   } catch (_) {
     // ignore
   }
