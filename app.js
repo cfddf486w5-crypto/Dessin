@@ -767,9 +767,28 @@ function restoreAdvancedOptions() {
     const saved = localStorage.getItem(ADVANCED_OPTIONS_KEY);
     if (!saved) return;
     const parsed = JSON.parse(saved);
+
+    const nightMode = parsed.ui?.ui_01 === true && parsed.ui?.ui_02 !== true;
+    document.body.classList.toggle('theme-night', nightMode);
+
+    if (parsed.ui?.ui_09 === true) {
+      document.documentElement.style.setProperty('--btn-radius', '18px');
+    } else if (parsed.ui?.ui_10 === true) {
+      document.documentElement.style.setProperty('--btn-radius', '4px');
+    }
+
+    if (parsed.ui?.ui_15 === true) {
+      document.documentElement.style.setProperty('--toolbar-gap', '6px');
+    } else if (parsed.ui?.ui_16 === true) {
+      document.documentElement.style.setProperty('--toolbar-gap', '12px');
+    }
+
     if (parsed.layout?.boardOneKilometer === true) {
       canvas.width = 3000;
       canvas.height = 3000;
+    } else {
+      canvas.width = 2200;
+      canvas.height = 2200;
     }
   } catch (_) {
     // ignore
