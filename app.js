@@ -23,6 +23,7 @@ const measureTooltip = document.getElementById('measure-tooltip');
 const measureHandle = measureTooltip.querySelector('.tooltip-handle');
 const lengthLabel = document.getElementById('measure-length');
 const widthLabel = document.getElementById('measure-width');
+const measureUnitToggle = document.getElementById('measure-unit-toggle');
 
 const form = document.getElementById('bin-form');
 const emptyState = document.getElementById('empty-state');
@@ -51,7 +52,8 @@ let options = {
   showGrid: true,
   showLabels: true,
   autoSave: true,
-  gridSize: 45
+  gridSize: 45,
+  dimensionUnit: 'ft-in'
 };
 
 const undoStack = [];
@@ -112,9 +114,36 @@ function redo() {
 
 function toImperial(value) {
   const totalInches = Math.max(0, Math.round(value / PIXELS_PER_INCH));
+  if (options.dimensionUnit === 'in') {
+    return `${totalInches}"`;
+  }
+
   const feet = Math.floor(totalInches / 12);
   const inches = totalInches % 12;
   return `${feet}' ${inches}"`;
+}
+
+function hexToRgb(hex) {
+  const normalized = hex.replace('#', '').trim();
+  const expanded = normalized.length === 3
+    ? normalized.split('').map((c) => c + c).join('')
+    : normalized;
+
+  const value = Number.parseInt(expanded, 16);
+  if (Number.isNaN(value)) {
+    return { r: 155, g: 183, b: 255 };
+  }
+
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255
+  };
+}
+
+function colorWithAlpha(hex, alpha) {
+  const { r, g, b } = hexToRgb(hex || '#9bb7ff');
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 function updateMeasureTooltip(width, height) {
@@ -175,10 +204,34 @@ function drawScene() {
 
   bins.forEach((bin) => {
     const selected = bin.id === selectedId;
-    ctx.fillStyle = bin.color || '#9bb7ff';
-    ctx.strokeStyle = selected ? '#1f4ecf' : '#4a6ad3';
-    ctx.lineWidth = selected ? 4 : 2;
+    const binColor = bin.color || '#9bb7ff';
+
+    // Zone = ultra pâle
+    ctx.fillStyle = colorWithAlpha(binColor, 0.12);
     ctx.fillRect(bin.x, bin.y, bin.width, bin.height);
+
+    // Section = un peu plus visible
+    const sectionInset = Math.min(bin.width, bin.height) * 0.08;
+    ctx.fillStyle = colorWithAlpha(binColor, 0.2);
+    ctx.fillRect(
+      bin.x + sectionInset,
+      bin.y + sectionInset,
+      Math.max(1, bin.width - sectionInset * 2),
+      Math.max(1, bin.height - sectionInset * 2)
+    );
+
+    // Bin = le plus foncé mais transparent pour voir la grille
+    const binInset = Math.min(bin.width, bin.height) * 0.18;
+    ctx.fillStyle = colorWithAlpha(binColor, 0.34);
+    ctx.fillRect(
+      bin.x + binInset,
+      bin.y + binInset,
+      Math.max(1, bin.width - binInset * 2),
+      Math.max(1, bin.height - binInset * 2)
+    );
+
+    ctx.strokeStyle = selected ? '#1f4ecf' : '#4a6ad3';
+    ctx.lineWidth = selected ? 3 : 1.6;
     ctx.strokeRect(bin.x, bin.y, bin.width, bin.height);
 
     if (bin.locked) {
@@ -196,6 +249,7 @@ function drawScene() {
       ctx.fillStyle = '#233f8a';
       ctx.font = '18px -apple-system, sans-serif';
       ctx.fillText(`Zone: ${bin.zone || 'N/A'}`, bin.x + 10, bin.y + 56);
+      ctx.fillText(`Section: ${bin.section || 'N/A'}`, bin.x + 10, bin.y + 78);
     }
   });
 }
@@ -280,6 +334,7 @@ function restoreFromStorage() {
       ...options,
       ...(parsed.options || {})
     };
+    if (!['ft-in', 'in'].includes(options.dimensionUnit)) options.dimensionUnit = 'ft-in';
   } catch (_) {
     bins = [];
   }
@@ -291,6 +346,7 @@ function syncOptionsUI() {
   labelsToggle.checked = options.showLabels;
   autosaveToggle.checked = options.autoSave;
   gridSizeInput.value = String(options.gridSize);
+  measureUnitToggle.textContent = options.dimensionUnit === 'in' ? '📏 po' : '📏 pi+po';
 }
 
 canvas.addEventListener('pointerdown', (event) => {
@@ -465,6 +521,7 @@ fileInput.addEventListener('change', async () => {
       ...options,
       ...(data.options || {})
     };
+    if (!['ft-in', 'in'].includes(options.dimensionUnit)) options.dimensionUnit = 'ft-in';
     syncOptionsUI();
     selectBin(null);
     drawScene();
@@ -563,6 +620,17 @@ measureHandle.addEventListener('pointerup', (event) => {
     tooltipDrag = null;
     measureTooltip.classList.remove('dragging');
   }
+});
+
+
+measureUnitToggle.addEventListener('click', () => {
+  options.dimensionUnit = options.dimensionUnit === 'ft-in' ? 'in' : 'ft-in';
+  measureUnitToggle.textContent = options.dimensionUnit === 'in' ? '📏 po' : '📏 pi+po';
+  const current = bins.find((item) => item.id === selectedId);
+  if (current) {
+    updateMeasureTooltip(current.width, current.height);
+  }
+  persistIfEnabled();
 });
 
 window.addEventListener('resize', () => {
