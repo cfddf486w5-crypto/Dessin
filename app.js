@@ -81,7 +81,8 @@ const fields = {
 const PIXELS_PER_INCH = 4;
 const GRID_CELL_INCHES = 50;
 const GRID_CELL_PIXELS = GRID_CELL_INCHES * PIXELS_PER_INCH;
-const MASTER_GRID_DIVISIONS = 4;
+const MASTER_GRID_DIVISIONS = 2;
+const MASTER_SQUARE_PIXELS = GRID_CELL_PIXELS * MASTER_GRID_DIVISIONS;
 const STORAGE_KEY = 'dessin-warehouse-plan-v2';
 const ADVANCED_OPTIONS_KEY = 'dessin-advanced-options-v1';
 const VIEW3D_CONTEXT_KEY = 'dessin-view3d-context-v1';
@@ -110,7 +111,7 @@ let options = {
   showGrid: true,
   showLabels: true,
   autoSave: true,
-  gridSize: GRID_CELL_PIXELS,
+  gridSize: MASTER_SQUARE_PIXELS,
   zoom: 1,
   dimensionUnit: 'ft-in',
   overlayOpacity: 40,
@@ -293,6 +294,21 @@ function drawGrid() {
   ctx.restore();
 }
 
+function drawRoundedRectPath(context, x, y, width, height, radius) {
+  const safeRadius = Math.max(0, Math.min(radius, Math.abs(width) / 2, Math.abs(height) / 2));
+  context.beginPath();
+  context.moveTo(x + safeRadius, y);
+  context.lineTo(x + width - safeRadius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+  context.lineTo(x + width, y + height - safeRadius);
+  context.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+  context.lineTo(x + safeRadius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+  context.lineTo(x, y + safeRadius);
+  context.quadraticCurveTo(x, y, x + safeRadius, y);
+  context.closePath();
+}
+
 function drawReferenceImage() {
   if (!options.showOverlay || !referenceImageState.element) return;
 
@@ -362,17 +378,20 @@ function drawRotatedBin(bin, selected) {
   const binColor = bin.color || '#9bb7ff';
   const type = ['zone', 'section', 'bin'].includes(bin.type) ? bin.type : 'bin';
   const alphaByType = { zone: 0.12, section: 0.22, bin: 0.34 };
+  const cornerRadius = Math.max(6, Math.min(bin.width, bin.height) * 0.08);
 
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(angle);
 
   ctx.fillStyle = colorWithAlpha(binColor, alphaByType[type]);
-  ctx.fillRect(-bin.width / 2, -bin.height / 2, bin.width, bin.height);
+  drawRoundedRectPath(ctx, -bin.width / 2, -bin.height / 2, bin.width, bin.height, cornerRadius);
+  ctx.fill();
 
   ctx.strokeStyle = selected ? '#1f4ecf' : '#4a6ad3';
   ctx.lineWidth = selected ? 3 : 1.6;
-  ctx.strokeRect(-bin.width / 2, -bin.height / 2, bin.width, bin.height);
+  drawRoundedRectPath(ctx, -bin.width / 2, -bin.height / 2, bin.width, bin.height, cornerRadius);
+  ctx.stroke();
 
   if (bin.locked) {
     ctx.fillStyle = '#0f1f43';
@@ -770,7 +789,7 @@ function persistIfEnabled() {
 }
 
 function enforceGridScale() {
-  options.gridSize = GRID_CELL_PIXELS;
+  options.gridSize = MASTER_SQUARE_PIXELS;
 }
 
 function restoreFromStorage() {
@@ -916,7 +935,7 @@ function attachPlanPanHandle(handle, axis) {
 }
 
 function adjustGridSize() {
-  options.gridSize = GRID_CELL_PIXELS;
+  options.gridSize = MASTER_SQUARE_PIXELS;
   gridSizeInput.value = String(options.gridSize);
   drawScene();
   persistIfEnabled();
@@ -980,7 +999,8 @@ canvas.addEventListener('pointermove', (event) => {
     ctx.setLineDash([8, 6]);
     ctx.strokeStyle = '#244bc5';
     ctx.lineWidth = 3;
-    ctx.strokeRect(startPoint.x, startPoint.y, width, height);
+    drawRoundedRectPath(ctx, startPoint.x, startPoint.y, width, height, 10);
+    ctx.stroke();
     ctx.setLineDash([]);
 
     updateMeasureTooltip(Math.abs(width), Math.abs(height));
