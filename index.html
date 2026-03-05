@@ -77,6 +77,15 @@
               <button type="button" id="overlay-opacity-plus" class="mini-btn" aria-label="Augmenter l'opacité du calque">+</button>
             </div>
           </label>
+          <label class="inline-field">
+            Pixels d'un carré (image)
+            <input type="number" id="overlay-cell-pixels" min="5" max="500" step="1" value="50" />
+          </label>
+          <button type="button" id="sync-overlay-grid">Synchroniser grille image ↔︎ plan</button>
+          <button type="button" id="overlay-left" aria-label="Décaler le calque à gauche">⬅️ Calque</button>
+          <button type="button" id="overlay-right" aria-label="Décaler le calque à droite">➡️ Calque</button>
+          <button type="button" id="overlay-up" aria-label="Décaler le calque en haut">⬆️ Calque</button>
+          <button type="button" id="overlay-down" aria-label="Décaler le calque en bas">⬇️ Calque</button>
           <label class="toggle">
             <input type="checkbox" id="overlay-toggle" checked />
             <span>Afficher le calque image</span>
