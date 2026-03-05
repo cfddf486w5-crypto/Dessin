@@ -1,0 +1,26 @@
+name: Repository checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  basic-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure key project files are present
+        run: |
+          test -f README.md
+          test -f ContentView.swift
+          test -f WarehouseCanvasView.swift
+          test -f RackModels.swift
+          test -f WarehouseStore.swift
+          test -f DessinApp.swift
+
+      - name: Validate devcontainer config
+        run: |
+          python3 -m json.tool .devcontainer/devcontainer.json >/dev/null
