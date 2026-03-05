@@ -327,6 +327,50 @@ body.theme-night .bar-height-popup {
 
 .board-wrap {
   overflow: auto;
+  position: relative;
+}
+
+.plan-pan-handle {
+  position: absolute;
+  z-index: 8;
+  border: 1px solid rgb(45 87 177 / 28%);
+  border-radius: 999px;
+  background: rgb(233 241 255 / 88%);
+  color: #1d3f90;
+  font-weight: 700;
+  box-shadow: 0 6px 16px rgb(28 61 138 / 16%);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.plan-pan-handle:active,
+.plan-pan-handle.dragging {
+  cursor: grabbing;
+}
+
+.plan-pan-handle.horizontal {
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 140px;
+  padding: 8px 12px;
+}
+
+.plan-pan-handle.vertical {
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  min-height: 130px;
+  padding: 10px 6px;
+}
+
+body.theme-night .plan-pan-handle {
+  background: rgb(28 47 88 / 90%);
+  color: #dbe6ff;
+  border-color: rgb(124 168 255 / 36%);
 }
 
 .stepper-field {
