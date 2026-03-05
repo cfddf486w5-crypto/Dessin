@@ -446,3 +446,159 @@ select {
   color: #4f6397;
   font-weight: 600;
 }
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rack3d-main {
+  display: grid;
+  gap: 12px;
+}
+
+.rack3d-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.wide-field {
+  grid-column: 1 / -1;
+}
+
+.rack3d-controls button {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: var(--primary);
+  color: white;
+  font-weight: 700;
+}
+
+.rack3d-scene {
+  overflow-x: auto;
+}
+
+.rack-frame {
+  position: relative;
+  min-width: 340px;
+  height: 560px;
+  margin: 8px auto 4px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #f7faff, #e8efff);
+  border: 1px solid #d4def5;
+  perspective: 700px;
+}
+
+.rack-support {
+  position: absolute;
+  top: 6%;
+  width: 18px;
+  height: 88%;
+  background: linear-gradient(180deg, #1c56c9, #0f388b);
+  border-radius: 8px;
+  box-shadow: 3px 0 0 rgb(255 255 255 / 32%) inset;
+  transform: skewY(-6deg);
+}
+
+.rack-support.left {
+  left: 4%;
+}
+
+.rack-support.right {
+  right: 4%;
+}
+
+.rack-beam {
+  position: absolute;
+  left: 7%;
+  width: 86%;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff8b00, #ff6600);
+  box-shadow: 0 3px 8px rgb(255 102 0 / 32%);
+}
+
+.beam-label {
+  position: absolute;
+  top: -20px;
+  left: 0;
+  font-size: 0.75rem;
+  color: #934300;
+  font-weight: 700;
+}
+
+.alveole-cell {
+  position: absolute;
+  border: 1px dashed #91a8dc;
+  background: rgb(91 125 207 / 12%);
+  border-radius: 6px;
+  padding: 3px;
+  overflow: hidden;
+  font-size: 0.68rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.alveole-cell strong {
+  color: #173e96;
+}
+
+.alveole-cell small {
+  color: #314a86;
+  line-height: 1.2;
+}
+
+.human-scale {
+  position: absolute;
+  right: 1.5%;
+  bottom: 5%;
+  width: 36px;
+  height: 210px;
+  background: linear-gradient(180deg, #8895ad, #66758f);
+  border-radius: 18px 18px 10px 10px;
+  opacity: 0.75;
+}
+
+.human-scale::before {
+  content: '';
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #77849d;
+  top: -28px;
+  left: 2px;
+}
+
+.human-scale span {
+  position: absolute;
+  width: 140px;
+  right: 42px;
+  top: 46%;
+  font-size: 0.72rem;
+  color: #41516f;
+  font-weight: 700;
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-bottom: 1px solid #dce4f6;
+  padding: 8px;
+  text-align: left;
+  font-size: 0.88rem;
+}

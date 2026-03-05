@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Vue 3D humaine - Warehouse Planner</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="rack3d-page">
+    <header>
+      <div class="header-row">
+        <div>
+          <h1>Visualisation rack 3D (vue humaine)</h1>
+          <p>Supports bleus, beams orange et alvéoles configurables par niveau.</p>
+        </div>
+        <a class="options-link" href="index.html">⬅ Retour au plan</a>
+      </div>
+    </header>
+
+    <main class="rack3d-main">
+      <section class="panel rack3d-controls">
+        <h2>Configuration rack</h2>
+        <div class="rack3d-form-grid">
+          <label>
+            Largeur totale (m)
+            <input type="number" id="rack-width" min="0.5" step="0.1" value="2.7" />
+          </label>
+          <label>
+            Profondeur (m)
+            <input type="number" id="rack-depth" min="0.3" step="0.1" value="1.1" />
+          </label>
+          <label>
+            Hauteur totale max (m)
+            <input type="number" id="rack-height" min="1" step="0.1" value="4.5" />
+          </label>
+          <label>
+            Sections largeur par beam
+            <input type="number" id="rack-sections" min="1" max="12" step="1" value="3" />
+          </label>
+          <label class="wide-field">
+            Hauteurs entre beams (m, séparées par virgule)
+            <input type="text" id="beam-heights" value="1.2,1.1,1.0" />
+          </label>
+        </div>
+        <button id="render-rack" type="button">Générer la vue 3D</button>
+      </section>
+
+      <section class="panel rack3d-visual-panel">
+        <h2>Rack & niveaux</h2>
+        <div class="rack3d-scene" id="rack-scene" aria-live="polite"></div>
+      </section>
+
+      <section class="panel rack3d-table-panel">
+        <h2>Alvéoles (dimensions + volumes)</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Code alvéole</th>
+                <th>Niveau</th>
+                <th>Dimensions H/L/P</th>
+                <th>Volume (m³)</th>
+                <th>Qty (L)</th>
+              </tr>
+            </thead>
+            <tbody id="alveole-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="view3d.js"></script>
+  </body>
+</html>
