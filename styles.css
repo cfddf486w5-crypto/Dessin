@@ -378,3 +378,13 @@ select {
   font-size: 0.9rem;
   font-weight: 600;
 }
+
+#layout-panel::after {
+  content: attr(data-layout-count);
+  display: block;
+  margin-top: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #4e65a8;
+  letter-spacing: 0.02em;
+}
