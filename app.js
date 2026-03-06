@@ -39,6 +39,7 @@ const overlayRightButton = document.getElementById('overlay-right');
 const overlayUpButton = document.getElementById('overlay-up');
 const overlayDownButton = document.getElementById('overlay-down');
 const clearReferenceImageButton = document.getElementById('clear-reference-image');
+const constructionButtons = document.querySelectorAll('[data-template-item]');
 
 const boardWrap = document.querySelector('.board-wrap');
 const panHorizontalHandle = document.getElementById('pan-horizontal-handle');
@@ -96,6 +97,35 @@ const PRESET_BIN_OPTIONS = {
   presetBinP5: { width: BIG_GRID_CELL_INCHES * PIXELS_PER_INCH, height: 250 * PIXELS_PER_INCH },
   presetBinP6: { width: BIG_GRID_CELL_INCHES * PIXELS_PER_INCH, height: 300 * PIXELS_PER_INCH },
   presetBinP7: { width: BIG_GRID_CELL_INCHES * PIXELS_PER_INCH, height: 350 * PIXELS_PER_INCH }
+};
+
+const CONSTRUCTION_TEMPLATES = {
+  pedestrianLine: { name: '🚶 Ligne piéton', width: 700, height: 22, type: 'section', color: '#ffe08a', section: 'Circulation', zone: 'Piéton' },
+  liftRoadLine: { name: '🛣️ Ligne route lift', width: 860, height: 36, type: 'section', color: '#ffb37a', section: 'Circulation', zone: 'Lift' },
+  doorSingle: { name: '🚪 Porte simple', width: 90, height: 26, type: 'bin', color: '#7fb2ff', section: 'Accès', zone: 'Ouverture' },
+  doorDouble: { name: '🚪🚪 Porte double', width: 160, height: 28, type: 'bin', color: '#5f99f5', section: 'Accès', zone: 'Ouverture' },
+  garageDoor: { name: '🚛 Porte de garage', width: 280, height: 34, type: 'bin', color: '#4a78d0', section: 'Accès', zone: 'Quai' },
+  wall: { name: '🧱 Mur', width: 900, height: 28, type: 'section', color: '#8f96a6', section: 'Structure', zone: 'Bâti', locked: true },
+  stairway: { name: '🪜 Escalier', width: 140, height: 100, type: 'zone', color: '#c4d8ff', section: 'Accès', zone: 'Vertical' },
+  emergencyExit: { name: '🟢 Sortie secours', width: 120, height: 50, type: 'bin', color: '#81d89f', section: 'Sécurité', zone: 'Évacuation' },
+  loadingDock: { name: '📦 Quai chargement', width: 280, height: 120, type: 'zone', color: '#b7cffb', section: 'Réception', zone: 'Expédition' },
+  safetyZone: { name: '🦺 Zone sécurité', width: 240, height: 180, type: 'zone', color: '#ffe7a1', section: 'Sécurité', zone: 'Protection' },
+  fireExtinguisher: { name: '🧯 Extincteur', width: 55, height: 55, type: 'bin', color: '#ff9ea7', section: 'Sécurité', zone: 'Incendie' },
+  supportColumn: { name: '🧱 Colonne', width: 70, height: 70, type: 'bin', color: '#b8becd', section: 'Structure', zone: 'Support', locked: true },
+  ramp: { name: '↗️ Rampe', width: 220, height: 70, type: 'section', color: '#bde1cf', section: 'Circulation', zone: 'Transition' },
+  crosswalk: { name: '⚪ Passage clouté', width: 300, height: 38, type: 'section', color: '#f1f4f8', section: 'Circulation', zone: 'Signalétique' },
+  barrier: { name: '⛔ Barrière', width: 180, height: 40, type: 'bin', color: '#fda8a8', section: 'Sécurité', zone: 'Restriction' },
+  chargingStation: { name: '🔌 Borne recharge', width: 90, height: 90, type: 'bin', color: '#9cd4ff', section: 'Énergie', zone: 'Maintenance' },
+  officePod: { name: '🧑‍💼 Bureau', width: 200, height: 150, type: 'zone', color: '#d8e0ff', section: 'Administration', zone: 'Bureaux' },
+  receptionDesk: { name: '🛎️ Comptoir accueil', width: 180, height: 70, type: 'bin', color: '#d6c7ff', section: 'Administration', zone: 'Accueil' },
+  cameraPoint: { name: '📷 Caméra', width: 65, height: 65, type: 'bin', color: '#b5c8f4', section: 'Sécurité', zone: 'Surveillance' },
+  alarmPoint: { name: '🚨 Alarme', width: 70, height: 70, type: 'bin', color: '#ff9d9d', section: 'Sécurité', zone: 'Alerte' },
+  washStation: { name: '🚿 Lavabo', width: 120, height: 90, type: 'bin', color: '#b8f0ff', section: 'Services', zone: 'Hygiène' },
+  lockerArea: { name: '🗄️ Casier', width: 200, height: 110, type: 'zone', color: '#d5def8', section: 'Services', zone: 'Vestiaire' },
+  cartPark: { name: '🛒 Parking chariot', width: 260, height: 120, type: 'zone', color: '#c7defc', section: 'Logistique', zone: 'Matériel' },
+  waitingZone: { name: '🪑 Zone attente', width: 210, height: 130, type: 'zone', color: '#e9ddff', section: 'Services', zone: 'Accueil' },
+  elevator: { name: '🛗 Ascenseur', width: 140, height: 140, type: 'bin', color: '#c5d2ea', section: 'Accès', zone: 'Vertical' },
+  deliveryGate: { name: '📬 Issue livraison', width: 220, height: 65, type: 'bin', color: '#9bc0fb', section: 'Expédition', zone: 'Sortie' }
 };
 
 let mode = 'draw';
@@ -702,6 +732,53 @@ function setMode(nextMode) {
   selectButton.classList.toggle('active', mode === 'select');
 }
 
+function findConstructionInsertPosition(width, height) {
+  const margin = Math.max(20, options.gridSize / MASTER_GRID_DIVISIONS);
+  const stepX = width + margin;
+  const stepY = height + margin;
+  const usableWidth = Math.max(1, canvas.width - width - margin);
+  const cols = Math.max(1, Math.floor(usableWidth / Math.max(1, stepX)));
+  const index = bins.length;
+  const col = index % cols;
+  const row = Math.floor(index / cols);
+
+  return {
+    x: clamp(snap(margin + col * stepX), 0, canvas.width - width),
+    y: clamp(snap(margin + row * stepY), 0, canvas.height - height)
+  };
+}
+
+function addConstructionTemplate(templateKey) {
+  const template = CONSTRUCTION_TEMPLATES[templateKey];
+  if (!template) return;
+
+  pushHistory();
+  const width = Math.max(20, template.width);
+  const height = Math.max(20, template.height);
+  const { x, y } = findConstructionInsertPosition(width, height);
+
+  const bin = normalizeBin({
+    id: crypto.randomUUID(),
+    x,
+    y,
+    width,
+    height,
+    name: template.name,
+    section: template.section,
+    zone: template.zone,
+    location: 'Élément construction',
+    type: template.type || 'bin',
+    color: template.color || '#9bb7ff',
+    locked: Boolean(template.locked)
+  });
+
+  bins.push(bin);
+  selectBin(bin);
+  setMode('select');
+  drawScene();
+  persistIfEnabled();
+}
+
 function hitTest(x, y) {
   for (let i = bins.length - 1; i >= 0; i -= 1) {
     const bin = bins[i];
@@ -1085,6 +1162,12 @@ form.addEventListener('submit', (event) => {
 
 drawButton.addEventListener('click', () => setMode('draw'));
 selectButton.addEventListener('click', () => setMode('select'));
+
+constructionButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    addConstructionTemplate(button.dataset.templateItem || '');
+  });
+});
 
 duplicateButton.addEventListener('click', () => {
   const current = bins.find((item) => item.id === selectedId);

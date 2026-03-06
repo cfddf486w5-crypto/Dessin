@@ -21,7 +21,7 @@
     </header>
 
     <main>
-      <details class="toolbar-group" open>
+      <details class="toolbar-group">
         <summary>Outils de dessin</summary>
         <section class="toolbar">
           <button id="draw-mode" class="active">Tracer bin</button>
@@ -34,7 +34,7 @@
         </section>
       </details>
 
-      <details class="toolbar-group" open>
+      <details class="toolbar-group">
         <summary>Options du plan</summary>
         <section class="toolbar options" aria-label="Options d'amélioration">
           <label class="toggle">
@@ -91,6 +91,38 @@
             <span>Afficher le calque image</span>
           </label>
           <button type="button" id="clear-reference-image">Retirer image calque</button>
+        </section>
+      </details>
+
+      <details class="toolbar-group">
+        <summary>Éléments de construction</summary>
+        <section class="toolbar secondary construction-tools" aria-label="Insertion d'éléments de construction">
+          <button type="button" data-template-item="pedestrianLine">🚶 Ligne piéton</button>
+          <button type="button" data-template-item="liftRoadLine">🛣️ Ligne route lift</button>
+          <button type="button" data-template-item="doorSingle">🚪 Porte simple</button>
+          <button type="button" data-template-item="doorDouble">🚪🚪 Porte double</button>
+          <button type="button" data-template-item="garageDoor">🚛 Porte de garage</button>
+          <button type="button" data-template-item="wall">🧱 Mur</button>
+          <button type="button" data-template-item="stairway">🪜 Escalier</button>
+          <button type="button" data-template-item="emergencyExit">🟢 Sortie secours</button>
+          <button type="button" data-template-item="loadingDock">📦 Quai chargement</button>
+          <button type="button" data-template-item="safetyZone">🦺 Zone sécurité</button>
+          <button type="button" data-template-item="fireExtinguisher">🧯 Extincteur</button>
+          <button type="button" data-template-item="supportColumn">🧱 Colonne</button>
+          <button type="button" data-template-item="ramp">↗️ Rampe</button>
+          <button type="button" data-template-item="crosswalk">⚪ Passage clouté</button>
+          <button type="button" data-template-item="barrier">⛔ Barrière</button>
+          <button type="button" data-template-item="chargingStation">🔌 Borne recharge</button>
+          <button type="button" data-template-item="officePod">🧑‍💼 Bureau</button>
+          <button type="button" data-template-item="receptionDesk">🛎️ Comptoir accueil</button>
+          <button type="button" data-template-item="cameraPoint">📷 Caméra</button>
+          <button type="button" data-template-item="alarmPoint">🚨 Alarme</button>
+          <button type="button" data-template-item="washStation">🚿 Lavabo</button>
+          <button type="button" data-template-item="lockerArea">🗄️ Casier</button>
+          <button type="button" data-template-item="cartPark">🛒 Parking chariot</button>
+          <button type="button" data-template-item="waitingZone">🪑 Zone attente</button>
+          <button type="button" data-template-item="elevator">🛗 Ascenseur</button>
+          <button type="button" data-template-item="deliveryGate">📬 Issue livraison</button>
         </section>
       </details>
 
