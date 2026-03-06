@@ -254,43 +254,43 @@ function drawGrid() {
   if (!options.showGrid) return;
 
   ctx.save();
-  const divisionSize = Math.max(1, options.gridSize / MASTER_GRID_DIVISIONS);
+  const masterSize = Math.max(1, options.gridSize);
+  const divisionSize = Math.max(1, masterSize / MASTER_GRID_DIVISIONS);
+  const crispOffset = 0.5;
+  const axisLimit = {
+    x: canvas.width,
+    y: canvas.height
+  };
 
-  ctx.strokeStyle = '#ecf1ff';
-  ctx.lineWidth = 1;
+  const drawAxisLines = (axis, step, color, lineWidth, skipMajor) => {
+    const limit = axisLimit[axis];
+    for (let position = 0; position <= limit; position += step) {
+      if (skipMajor) {
+        const majorRatio = position / masterSize;
+        if (Math.abs(Math.round(majorRatio) - majorRatio) < 1e-6) {
+          continue;
+        }
+      }
 
-  for (let x = 0; x <= canvas.width; x += divisionSize) {
-    if (x % options.gridSize === 0) continue;
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, canvas.height);
-    ctx.stroke();
-  }
+      const p = position + crispOffset;
+      ctx.beginPath();
+      if (axis === 'x') {
+        ctx.moveTo(p, 0);
+        ctx.lineTo(p, canvas.height);
+      } else {
+        ctx.moveTo(0, p);
+        ctx.lineTo(canvas.width, p);
+      }
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.stroke();
+    }
+  };
 
-  for (let y = 0; y <= canvas.height; y += divisionSize) {
-    if (y % options.gridSize === 0) continue;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(canvas.width, y);
-    ctx.stroke();
-  }
-
-  ctx.strokeStyle = '#d5dff7';
-  ctx.lineWidth = 1.2;
-
-  for (let x = 0; x <= canvas.width; x += options.gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, canvas.height);
-    ctx.stroke();
-  }
-
-  for (let y = 0; y <= canvas.height; y += options.gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(canvas.width, y);
-    ctx.stroke();
-  }
+  drawAxisLines('x', divisionSize, '#ecf1ff', 1, true);
+  drawAxisLines('y', divisionSize, '#ecf1ff', 1, true);
+  drawAxisLines('x', masterSize, '#d5dff7', 1.2, false);
+  drawAxisLines('y', masterSize, '#d5dff7', 1.2, false);
 
   ctx.restore();
 }
