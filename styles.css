@@ -159,20 +159,7 @@ body.theme-night select {
   width: 100%;
   height: auto;
   border-radius: 12px;
-  background: repeating-linear-gradient(
-      to right,
-      #e8ecf8,
-      #e8ecf8 1px,
-      transparent 1px,
-      transparent 45px
-    ),
-    repeating-linear-gradient(
-      to bottom,
-      #e8ecf8,
-      #e8ecf8 1px,
-      transparent 1px,
-      transparent 45px
-    );
+  background: #f8faff;
   touch-action: none;
 }
 
